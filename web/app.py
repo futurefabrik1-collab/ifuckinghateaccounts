@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 from datetime import datetime
 import shutil
+from collections import deque
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -23,6 +24,9 @@ from src.statement_parser import StatementParser
 
 app = Flask(__name__)
 CORS(app)
+
+# Undo history - store last 50 operations per statement
+undo_history = {}  # {statement_name: deque([{operation_data}, ...], maxlen=50)}
 
 # Configuration
 BASE_DIR = Path(__file__).parent.parent
@@ -81,6 +85,10 @@ def get_all_statements():
             for ext in ALLOWED_STATEMENT_EXTENSIONS:
                 statement_files = list(folder.glob(f"*.{ext}"))
                 for s in statement_files:
+                    # Skip files ending with _matches.csv or _matches.xlsx or _backup
+                    if s.stem.endswith('_matches') or '_backup' in s.stem:
+                        continue
+                    
                     statements.append({
                         'name': s.name,
                         'folder': folder.name,
@@ -224,7 +232,9 @@ def api_transactions():
                 'matched': bool(row['Matching Receipt Found']) if 'Matching Receipt Found' in row else False,
                 'no_receipt_needed': bool(row['No Receipt Needed']) if 'No Receipt Needed' in row else False,
                 'receipt': str(row['Matched Receipt File']) if pd.notna(row.get('Matched Receipt File', '')) else '',
-                'confidence': int(row['Match Confidence']) if pd.notna(row.get('Match Confidence', 0)) else 0
+                'confidence': int(row['Match Confidence']) if pd.notna(row.get('Match Confidence', 0)) else 0,
+                'owner_mark': bool(row['Owner_Mark']) if 'Owner_Mark' in row and pd.notna(row.get('Owner_Mark')) else False,
+                'owner_flo': bool(row['Owner_Flo']) if 'Owner_Flo' in row and pd.notna(row.get('Owner_Flo')) else False
             })
         
         return jsonify(transactions)
@@ -429,6 +439,126 @@ def toggle_no_receipt():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/match-receipts', methods=['POST'])
+def match_receipts():
+    """Run matching process for a statement"""
+    try:
+        data = request.json
+        statement_name = data.get('statement')
+        
+        if not statement_name:
+            return jsonify({'error': 'No statement specified'}), 400
+        
+        # Get folders
+        statement_folder = get_statement_folder(statement_name)
+        receipts_folder = get_statement_receipts_folder(statement_name, 'receipts')
+        matched_folder = get_statement_receipts_folder(statement_name, 'matched_receipts')
+        
+        if not receipts_folder.exists():
+            return jsonify({'error': 'No receipts folder found'}), 400
+        
+        # Import matching components
+        from src.receipt_processor import ReceiptProcessor
+        from src.matcher import ReceiptMatcher
+        
+        # Process receipts
+        processor = ReceiptProcessor(str(receipts_folder))
+        receipts = processor.process_all_receipts()
+        
+        # Load statement using StatementParser (to handle German format properly)
+        statement_file = statement_folder / statement_name
+        output_csv = statement_folder / f"{statement_name.rsplit('.', 1)[0]}_matches.csv"
+        
+        # Parse statement with proper German format handling
+        parser = StatementParser(str(statement_file))
+        parsed_df = parser.load_statement(
+            date_column='Buchungstag',
+            amount_column='Betrag',
+            description_column='Verwendungszweck'
+        )
+        
+        # Load original CSV to preserve all columns and match status
+        if output_csv.exists():
+            original_df = pd.read_csv(output_csv, sep=';', encoding='utf-8-sig', dtype={'Matched Receipt File': str})
+        else:
+            original_df = pd.read_csv(statement_file, sep=';', encoding='utf-8-sig')
+            if 'Matching Receipt Found' not in original_df.columns:
+                original_df['Matching Receipt Found'] = False
+                original_df['Matched Receipt File'] = ''
+                original_df['Match Confidence'] = 0
+            if 'No Receipt Needed' not in original_df.columns:
+                original_df['No Receipt Needed'] = False
+        
+        # Ensure correct dtypes for match columns
+        if 'Matched Receipt File' in original_df.columns:
+            original_df['Matched Receipt File'] = original_df['Matched Receipt File'].astype(str).replace('nan', '')
+        
+        # Get unmatched transactions from parsed data
+        unmatched_mask = original_df['Matching Receipt Found'] == False
+        unmatched_indices = original_df[unmatched_mask].index.tolist()
+        
+        # Get parsed transactions for unmatched rows
+        transactions = []
+        for idx in unmatched_indices:
+            transactions.append({
+                'original_index': idx,
+                'date': parsed_df.loc[idx, 'date'],
+                'amount': parsed_df.loc[idx, 'amount'],
+                'description': parsed_df.loc[idx, 'description']
+            })
+        
+        # Match
+        matcher = ReceiptMatcher()
+        results = matcher.match_all_transactions(transactions, receipts)
+        
+        # Update dataframe
+        matched_count = 0
+        for result in results:
+            if result['matched']:
+                transaction = result['transaction']
+                original_idx = transaction['original_index']
+                receipt = result['receipt']
+                
+                # IMPORTANT: Rename/move receipt FIRST, then update CSV with new name
+                row_num = original_idx + 2  # +2 for header and 0-index
+                # Use merchant from receipt if available
+                import re
+                clean_merchant = receipt.get('merchant', 'Unknown').strip()[:50]
+                clean_merchant = re.sub(r'[^\w\s-]', '', clean_merchant)
+                
+                new_filename = f"{row_num:03d}_{clean_merchant}.pdf"
+                original_path = Path(receipt['path'])
+                new_path = matched_folder / new_filename
+                
+                # Move/rename the file
+                if original_path.exists():
+                    matched_folder.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(original_path, new_path)
+                    original_path.unlink()  # Remove from receipts folder
+                
+                # NOW update CSV with the NEW filename
+                original_df.loc[original_idx, 'Matching Receipt Found'] = True
+                original_df.loc[original_idx, 'Matched Receipt File'] = new_filename  # Use NEW name
+                original_df.loc[original_idx, 'Match Confidence'] = result['confidence']
+                
+                matched_count += 1
+        
+        # Save updated CSV
+        original_df.to_csv(output_csv, sep=';', index=False, encoding='utf-8-sig')
+        
+        return jsonify({
+            'success': True,
+            'matched': matched_count,
+            'total_receipts': len(receipts),
+            'message': f'Matched {matched_count} receipt(s)'
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/download/<path:filepath>')
 def download_file(filepath):
     """Download a file"""
@@ -439,6 +569,593 @@ def download_file(filepath):
         else:
             return jsonify({'error': 'File not found'}), 404
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/clear-statement', methods=['POST'])
+def clear_statement():
+    """Clear/reset a statement - remove all matches and move receipts back"""
+    try:
+        data = request.json
+        statement_name = data.get('statement')
+        confirm = data.get('confirm', False)
+        
+        if not statement_name:
+            return jsonify({'error': 'No statement specified'}), 400
+        
+        if not confirm:
+            return jsonify({'error': 'Confirmation required'}), 400
+        
+        # Get folders
+        statement_folder = get_statement_folder(statement_name)
+        receipts_folder = get_statement_receipts_folder(statement_name, 'receipts')
+        matched_folder = get_statement_receipts_folder(statement_name, 'matched_receipts')
+        
+        # Move all matched receipts back to receipts folder
+        moved_count = 0
+        if matched_folder.exists():
+            for receipt_file in matched_folder.glob("*.pdf"):
+                # Move back to receipts folder
+                dest = receipts_folder / receipt_file.name
+                shutil.move(str(receipt_file), str(dest))
+                moved_count += 1
+        
+        # Delete the _matches.csv file
+        output_csv = statement_folder / f"{statement_name.rsplit('.', 1)[0]}_matches.csv"
+        if output_csv.exists():
+            output_csv.unlink()
+        
+        return jsonify({
+            'success': True,
+            'receipts_moved': moved_count,
+            'message': f'Statement reset: {moved_count} receipts moved back, match data cleared'
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/assign-receipt', methods=['POST'])
+def assign_receipt():
+    """Manually assign a receipt to a transaction row"""
+    try:
+        # Get the file from the request
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        # Get parameters
+        statement_name = request.form.get('statement')
+        row_number = request.form.get('row')
+        action = request.form.get('action', 'replace')  # 'replace' or 'restore'
+        
+        if not statement_name or not row_number:
+            return jsonify({'error': 'Missing statement or row number'}), 400
+        
+        try:
+            row_number = int(row_number)
+        except ValueError:
+            return jsonify({'error': 'Invalid row number'}), 400
+        
+        # Get folders
+        statement_folder = get_statement_folder(statement_name)
+        receipts_folder = get_statement_receipts_folder(statement_name, 'receipts')
+        matched_folder = get_statement_receipts_folder(statement_name, 'matched_receipts')
+        matched_folder.mkdir(parents=True, exist_ok=True)
+        
+        # Load statement data
+        statement_file = statement_folder / statement_name
+        output_csv = statement_folder / f"{statement_name.rsplit('.', 1)[0]}_matches.csv"
+        
+        if output_csv.exists():
+            df = pd.read_csv(output_csv, sep=';', encoding='utf-8-sig', dtype={'Matched Receipt File': str})
+        else:
+            df = pd.read_csv(statement_file, sep=';', encoding='utf-8-sig')
+            if 'Matching Receipt Found' not in df.columns:
+                df['Matching Receipt Found'] = False
+                df['Matched Receipt File'] = ''
+                df['Match Confidence'] = 0
+            if 'No Receipt Needed' not in df.columns:
+                df['No Receipt Needed'] = False
+        
+        # Convert row number to dataframe index (row - 2 because of header and 0-index)
+        df_index = row_number - 2
+        
+        if df_index < 0 or df_index >= len(df):
+            return jsonify({'error': 'Invalid row index'}), 400
+        
+        # Check if row already has a receipt
+        existing_receipt = str(df.loc[df_index, 'Matched Receipt File']) if pd.notna(df.loc[df_index, 'Matched Receipt File']) else ''
+        existing_receipt = existing_receipt if existing_receipt != 'nan' else ''
+        
+        # Handle existing receipt based on action
+        if existing_receipt and action == 'restore':
+            # Move existing receipt back to receipts folder
+            existing_path = matched_folder / existing_receipt
+            if existing_path.exists():
+                restore_path = receipts_folder / existing_receipt
+                shutil.move(str(existing_path), str(restore_path))
+        elif existing_receipt:
+            # Delete existing receipt (replace action)
+            existing_path = matched_folder / existing_receipt
+            if existing_path.exists():
+                existing_path.unlink()
+        
+        # Get transaction description for filename
+        import re
+        description = str(df.loc[df_index, 'Verwendungszweck'])
+        
+        # Extract merchant name from description
+        merchant = description.split('/')[0] if '/' in description else description.split(',')[0]
+        merchant = merchant.strip()[:50]
+        merchant = re.sub(r'[^\w\s-]', '', merchant).strip()
+        merchant = re.sub(r'\s+', '_', merchant)
+        
+        # Create new filename
+        file_ext = Path(file.filename).suffix
+        new_filename = f"{row_number:03d}_{merchant}{file_ext}"
+        new_path = matched_folder / new_filename
+        
+        # Save the uploaded file
+        file.save(str(new_path))
+        
+        # Update dataframe
+        df.loc[df_index, 'Matching Receipt Found'] = True
+        df.loc[df_index, 'Matched Receipt File'] = new_filename
+        df.loc[df_index, 'Match Confidence'] = 100  # Manual assignment = 100% confidence
+        df.loc[df_index, 'No Receipt Needed'] = False  # Clear "no receipt needed" flag
+        
+        # Reset ownership buttons to off when receipt is assigned
+        if 'Owner_Mark' in df.columns:
+            df.loc[df_index, 'Owner_Mark'] = False
+        if 'Owner_Flo' in df.columns:
+            df.loc[df_index, 'Owner_Flo'] = False
+        
+        # Save updated CSV
+        df.to_csv(output_csv, sep=';', index=False, encoding='utf-8-sig')
+        
+        # Add to undo history
+        if statement_name not in undo_history:
+            undo_history[statement_name] = deque(maxlen=50)
+        
+        undo_history[statement_name].append({
+            'type': 'assign',
+            'row': row_number,
+            'new_file': new_filename,
+            'old_file': existing_receipt if existing_receipt else None,
+            'action': action,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+        return jsonify({
+            'success': True,
+            'row': row_number,
+            'filename': new_filename,
+            'action': action,
+            'existing_removed': existing_receipt,
+            'message': f'Receipt assigned to row {row_number}',
+            'undo_available': len(undo_history[statement_name]) > 0
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/undo', methods=['POST'])
+def undo_last_action():
+    """Undo the last manual assignment"""
+    try:
+        data = request.json
+        statement_name = data.get('statement')
+        
+        if not statement_name:
+            return jsonify({'error': 'No statement specified'}), 400
+        
+        # Check if there's any history for this statement
+        if statement_name not in undo_history or len(undo_history[statement_name]) == 0:
+            return jsonify({'error': 'Nothing to undo'}), 400
+        
+        # Pop the last action
+        last_action = undo_history[statement_name].pop()
+        
+        # Get folders
+        statement_folder = get_statement_folder(statement_name)
+        receipts_folder = get_statement_receipts_folder(statement_name, 'receipts')
+        matched_folder = get_statement_receipts_folder(statement_name, 'matched_receipts')
+        
+        # Load statement data
+        statement_file = statement_folder / statement_name
+        output_csv = statement_folder / f"{statement_name.rsplit('.', 1)[0]}_matches.csv"
+        
+        if not output_csv.exists():
+            return jsonify({'error': 'No matches file found'}), 400
+        
+        df = pd.read_csv(output_csv, sep=';', encoding='utf-8-sig', dtype={'Matched Receipt File': str})
+        
+        # Convert row number to dataframe index
+        row_number = last_action['row']
+        df_index = row_number - 2
+        
+        if df_index < 0 or df_index >= len(df):
+            return jsonify({'error': 'Invalid row index in undo history'}), 400
+        
+        # Undo based on action type
+        if last_action['type'] == 'assign':
+            new_file = last_action['new_file']
+            old_file = last_action.get('old_file')
+            action = last_action.get('action', 'replace')
+            
+            # Remove the newly assigned file
+            new_path = matched_folder / new_file
+            if new_path.exists():
+                # Move back to receipts folder instead of deleting
+                restore_path = receipts_folder / new_file
+                shutil.move(str(new_path), str(restore_path))
+            
+            # Restore the old file if it was moved (restore action)
+            if old_file and action == 'restore':
+                # The old file should be in receipts folder, move it back to matched
+                old_receipts_path = receipts_folder / old_file
+                old_matched_path = matched_folder / old_file
+                if old_receipts_path.exists():
+                    shutil.move(str(old_receipts_path), str(old_matched_path))
+                    # Update CSV to reflect old file
+                    df.loc[df_index, 'Matching Receipt Found'] = True
+                    df.loc[df_index, 'Matched Receipt File'] = old_file
+                    df.loc[df_index, 'Match Confidence'] = 100
+                else:
+                    # Old file not found, just clear the match
+                    df.loc[df_index, 'Matching Receipt Found'] = False
+                    df.loc[df_index, 'Matched Receipt File'] = ''
+                    df.loc[df_index, 'Match Confidence'] = 0
+            else:
+                # No old file or it was deleted (replace action)
+                # Just clear the match
+                df.loc[df_index, 'Matching Receipt Found'] = False
+                df.loc[df_index, 'Matched Receipt File'] = ''
+                df.loc[df_index, 'Match Confidence'] = 0
+            
+            # Save updated CSV
+            df.to_csv(output_csv, sep=';', index=False, encoding='utf-8-sig')
+            
+            return jsonify({
+                'success': True,
+                'message': f'Undid assignment for row {row_number}',
+                'row': row_number,
+                'undo_available': len(undo_history[statement_name]) > 0
+            })
+        
+        return jsonify({'error': 'Unknown action type'}), 400
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/set-ownership', methods=['POST'])
+def set_ownership():
+    """Set ownership for a transaction (Mark and/or Flo - independent toggles)"""
+    try:
+        data = request.json
+        statement_name = data.get('statement')
+        row_number = data.get('row')
+        owner = data.get('owner')  # 'mark' or 'flo'
+        active = data.get('active', True)  # True or False
+        
+        if not statement_name or not row_number or not owner:
+            return jsonify({'error': 'Missing statement, row number, or owner'}), 400
+        
+        try:
+            row_number = int(row_number)
+        except ValueError:
+            return jsonify({'error': 'Invalid row number'}), 400
+        
+        # Validate owner value
+        if owner not in ['mark', 'flo']:
+            return jsonify({'error': 'Invalid owner value'}), 400
+        
+        # Get folders
+        statement_folder = get_statement_folder(statement_name)
+        statement_file = statement_folder / statement_name
+        output_csv = statement_folder / f"{statement_name.rsplit('.', 1)[0]}_matches.csv"
+        
+        # Load or create matches CSV
+        if output_csv.exists():
+            df = pd.read_csv(output_csv, sep=';', encoding='utf-8-sig', dtype={'Matched Receipt File': str})
+        else:
+            df = pd.read_csv(statement_file, sep=';', encoding='utf-8-sig')
+            if 'Matching Receipt Found' not in df.columns:
+                df['Matching Receipt Found'] = False
+                df['Matched Receipt File'] = ''
+                df['Match Confidence'] = 0
+            if 'No Receipt Needed' not in df.columns:
+                df['No Receipt Needed'] = False
+        
+        # Add owner columns if they don't exist
+        if 'Owner_Mark' not in df.columns:
+            df['Owner_Mark'] = False
+        if 'Owner_Flo' not in df.columns:
+            df['Owner_Flo'] = False
+        
+        # Convert row number to dataframe index
+        df_index = row_number - 2
+        
+        if df_index < 0 or df_index >= len(df):
+            return jsonify({'error': 'Invalid row index'}), 400
+        
+        # Update ownership
+        if owner == 'mark':
+            df.loc[df_index, 'Owner_Mark'] = active
+        elif owner == 'flo':
+            df.loc[df_index, 'Owner_Flo'] = active
+        
+        # Auto-activate "No Receipt Needed" when either Mark or Flo is active
+        mark_active = bool(df.loc[df_index, 'Owner_Mark'])
+        flo_active = bool(df.loc[df_index, 'Owner_Flo'])
+        
+        if mark_active or flo_active:
+            df.loc[df_index, 'No Receipt Needed'] = True
+        # When both are deactivated, keep "No Receipt Needed" (persistent behavior)
+        
+        # Save updated CSV
+        df.to_csv(output_csv, sep=';', index=False, encoding='utf-8-sig')
+        
+        return jsonify({
+            'success': True,
+            'row': row_number,
+            'owner': owner,
+            'active': active
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/delete-receipt-assignment', methods=['POST'])
+def delete_receipt_assignment():
+    """Delete a receipt assignment and move file back to receipts folder with random prefix"""
+    try:
+        data = request.json
+        statement_name = data.get('statement')
+        row_number = data.get('row')
+        filename = data.get('filename')
+        
+        if not statement_name or not row_number or not filename:
+            return jsonify({'error': 'Missing statement, row number, or filename'}), 400
+        
+        try:
+            row_number = int(row_number)
+        except ValueError:
+            return jsonify({'error': 'Invalid row number'}), 400
+        
+        # Get folders
+        statement_folder = get_statement_folder(statement_name)
+        receipts_folder = get_statement_receipts_folder(statement_name, 'receipts')
+        matched_folder = get_statement_receipts_folder(statement_name, 'matched_receipts')
+        
+        # Load statement data
+        statement_file = statement_folder / statement_name
+        output_csv = statement_folder / f"{statement_name.rsplit('.', 1)[0]}_matches.csv"
+        
+        if not output_csv.exists():
+            return jsonify({'error': 'No matches file found'}), 400
+        
+        df = pd.read_csv(output_csv, sep=';', encoding='utf-8-sig', dtype={'Matched Receipt File': str})
+        
+        # Convert row number to dataframe index
+        df_index = row_number - 2
+        
+        if df_index < 0 or df_index >= len(df):
+            return jsonify({'error': 'Invalid row index'}), 400
+        
+        # Move file back to receipts folder with random prefix
+        import random
+        import string
+        
+        matched_file_path = matched_folder / filename
+        if matched_file_path.exists():
+            # Generate random 6-character prefix
+            random_prefix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+            new_filename = f"{random_prefix}_{filename}"
+            new_path = receipts_folder / new_filename
+            
+            # Move file
+            shutil.move(str(matched_file_path), str(new_path))
+        else:
+            return jsonify({'error': 'Receipt file not found'}), 404
+        
+        # Clear match in CSV
+        df.loc[df_index, 'Matching Receipt Found'] = False
+        df.loc[df_index, 'Matched Receipt File'] = ''
+        df.loc[df_index, 'Match Confidence'] = 0
+        # Note: We keep "No Receipt Needed" and ownership settings as they were
+        
+        # Save updated CSV
+        df.to_csv(output_csv, sep=';', index=False, encoding='utf-8-sig')
+        
+        return jsonify({
+            'success': True,
+            'row': row_number,
+            'old_filename': filename,
+            'new_filename': new_filename,
+            'message': f'Receipt removed and moved to receipts folder as {new_filename}'
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/undo-history', methods=['GET'])
+def get_undo_history():
+    """Get undo history for a statement"""
+    try:
+        statement_name = request.args.get('statement')
+        
+        if not statement_name:
+            return jsonify({'error': 'No statement specified'}), 400
+        
+        history = []
+        if statement_name in undo_history:
+            history = list(undo_history[statement_name])
+        
+        return jsonify({
+            'history': history,
+            'count': len(history)
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/update-learning', methods=['POST'])
+def update_learning():
+    """Update learning model using all matched receipts from a statement"""
+    try:
+        data = request.json
+        statement_name = data.get('statement')
+        
+        if not statement_name:
+            return jsonify({'error': 'No statement specified'}), 400
+        
+        # Get folders
+        statement_folder = get_statement_folder(statement_name)
+        matched_folder = get_statement_receipts_folder(statement_name, 'matched_receipts')
+        
+        if not matched_folder.exists():
+            return jsonify({'error': 'No matched receipts found'}), 400
+        
+        # Load statement data
+        statement_file = statement_folder / statement_name
+        output_csv = statement_folder / f"{statement_name.rsplit('.', 1)[0]}_matches.csv"
+        
+        if not output_csv.exists():
+            return jsonify({'error': 'No matches file found'}), 400
+        
+        df = pd.read_csv(output_csv, sep=';', encoding='utf-8-sig', dtype={'Matched Receipt File': str})
+        
+        # Get all matched receipts
+        matched_receipts = []
+        for idx, row in df.iterrows():
+            if row.get('Matching Receipt Found', False):
+                receipt_file = str(row.get('Matched Receipt File', ''))
+                if receipt_file and receipt_file != 'nan' and receipt_file != '':
+                    matched_receipts.append({
+                        'file': receipt_file,
+                        'date': row['Buchungstag'],
+                        'amount': row['Betrag'],
+                        'description': row['Verwendungszweck']
+                    })
+        
+        if len(matched_receipts) == 0:
+            return jsonify({'error': 'No matched receipts to learn from'}), 400
+        
+        # Process each matched receipt to extract features for learning
+        from src.receipt_processor import ReceiptProcessor
+        
+        processor = ReceiptProcessor(str(matched_folder))
+        learning_data = []
+        
+        for receipt in matched_receipts:
+            receipt_path = matched_folder / receipt['file']
+            if receipt_path.exists():
+                try:
+                    # Extract receipt data
+                    receipt_data = processor.process_receipt(receipt_path)
+                    
+                    # Store the match for learning
+                    learning_data.append({
+                        'receipt_file': receipt['file'],
+                        'receipt_amount': receipt_data.get('amount'),
+                        'receipt_date': receipt_data.get('date'),
+                        'receipt_merchant': receipt_data.get('merchant'),
+                        'transaction_amount': receipt['amount'],
+                        'transaction_date': receipt['date'],
+                        'transaction_description': receipt['description']
+                    })
+                except Exception as e:
+                    print(f"Error processing {receipt['file']}: {e}")
+                    continue
+        
+        # Save learning data to a training file
+        learning_file = statement_folder / 'learning_data.json'
+        import json
+        
+        # Load existing learning data if it exists
+        if learning_file.exists():
+            with open(learning_file, 'r', encoding='utf-8') as f:
+                existing_data = json.load(f)
+        else:
+            existing_data = []
+        
+        # Append new learning data
+        existing_data.extend(learning_data)
+        
+        # Save updated learning data
+        with open(learning_file, 'w', encoding='utf-8') as f:
+            json.dump(existing_data, f, indent=2, ensure_ascii=False, default=str)
+        
+        return jsonify({
+            'success': True,
+            'receipts_processed': len(learning_data),
+            'total_learning_samples': len(existing_data),
+            'message': f'Learning model updated with {len(learning_data)} receipts'
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/delete-statement', methods=['POST'])
+def delete_statement():
+    """Delete a statement and all associated data"""
+    try:
+        data = request.json
+        statement_name = data.get('statement')
+        confirm = data.get('confirm', False)
+        
+        if not statement_name:
+            return jsonify({'error': 'No statement specified'}), 400
+        
+        if not confirm:
+            return jsonify({'error': 'Confirmation required'}), 400
+        
+        # Get statement folder
+        statement_folder = get_statement_folder(statement_name)
+        
+        if not statement_folder.exists():
+            return jsonify({'error': 'Statement not found'}), 404
+        
+        # Count items before deletion for reporting
+        receipts_count = len(list(statement_folder.glob("receipts/*.pdf")))
+        matched_count = len(list(statement_folder.glob("matched_receipts/*.pdf")))
+        
+        # Delete the entire statement folder
+        shutil.rmtree(statement_folder)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Statement deleted: {statement_name}',
+            'receipts_deleted': receipts_count,
+            'matched_deleted': matched_count
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 

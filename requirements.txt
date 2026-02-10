@@ -9,6 +9,8 @@ xlrd
 
 # OCR (Optional - for reading receipt text)
 pillow
+pytesseract
+pdf2image
 
 # String Matching
 fuzzywuzzy

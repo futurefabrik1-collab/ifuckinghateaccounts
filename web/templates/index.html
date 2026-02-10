@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Receipt Checker - Dashboard</title>
+    <title>SWEET DUDE SWEET DUDE SWEET DUDE SWEET 💰</title>
     <style>
         * {
             margin: 0;
@@ -11,13 +11,21 @@
             box-sizing: border-box;
         }
 
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: #f5f5f7;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 20s ease infinite;
             color: #1d1d1f;
             line-height: 1.6;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
         .container {
@@ -27,22 +35,59 @@
         }
 
         header {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
             margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
 
         h1 {
-            font-size: 32px;
-            font-weight: 600;
-            margin-bottom: 10px;
+            font-size: 38.4px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #FFD700, #FFA500, #FF6347);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+            letter-spacing: -1px;
+            animation: titlePulse 3s ease-in-out infinite;
+            filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.5));
+        }
+
+        @keyframes titlePulse {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.5)) brightness(1); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.8)) brightness(1.2); }
         }
 
         .subtitle {
-            color: #86868b;
+            color: rgba(255, 255, 255, 0.95);
             font-size: 16px;
+            margin: 5px 0 15px 0;
+            font-weight: 600;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-statement-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
         }
 
         .upload-section {
@@ -93,20 +138,13 @@
         }
 
         .statement-tabs {
-            display: flex;
-            gap: 8px;
-            background: white;
-            padding: 12px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
-            overflow-x: auto;
+            display: none; /* Hidden - tabs now in header */
         }
 
         .statement-tab {
             padding: 8px 16px;
-            border: none;
-            background: transparent;
+            border: 1px solid #d1d1d6;
+            background: white;
             color: #1d1d1f;
             cursor: pointer;
             border-radius: 8px;
@@ -114,15 +152,25 @@
             font-weight: 500;
             white-space: nowrap;
             transition: all 0.2s;
+            position: relative;
         }
 
         .statement-tab:hover {
             background: #f5f5f7;
+            border-color: #007aff;
         }
 
         .statement-tab.active {
             background: #007aff;
             color: white;
+            border-color: #007aff;
+        }
+
+        .statement-tab-label {
+            display: inline-block;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .stats-grid {
@@ -133,10 +181,19 @@
         }
 
         .stat-card {
-            background: white;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
             padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px) scale(1.03);
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.3);
         }
 
         .stat-value {
@@ -192,11 +249,13 @@
         }
 
         .content-section {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
             padding: 30px;
             margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
         table {
@@ -378,6 +437,119 @@
             background: #0051d5;
         }
 
+        /* Drag over styling for table rows */
+        tr.drag-over {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border: 2px dashed #FFD700 !important;
+            transform: scale(1.02);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        tr {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        tr:hover {
+            transform: translateX(5px);
+            box-shadow: -5px 0 15px rgba(102, 126, 234, 0.2);
+        }
+        
+        /* Badge animations */
+        .badge {
+            animation: badgePulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes badgePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .badge.matched {
+            animation: matchedGlow 2s ease-in-out infinite;
+        }
+        
+        @keyframes matchedGlow {
+            0%, 100% { box-shadow: 0 0 5px rgba(52, 199, 89, 0.5); }
+            50% { box-shadow: 0 0 15px rgba(52, 199, 89, 0.8); }
+        }
+
+        /* Ownership buttons */
+        .ownership-buttons-container {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .ownership-btn {
+            padding: 6px 12px;
+            border: 2px solid #d1d1d6;
+            border-radius: 8px;
+            background: white;
+            color: #86868b;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .ownership-btn:hover:not(.disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .ownership-btn.active {
+            background: linear-gradient(135deg, #ff3b30 0%, #ff6b60 100%);
+            border-color: #ff3b30;
+            color: white;
+            box-shadow: 0 4px 12px rgba(255, 59, 48, 0.3);
+        }
+
+        .ownership-btn.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        
+        th.center-header {
+            text-align: center !important;
+        }
+
+        /* Receipt delete button */
+        .receipt-cell {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: space-between;
+        }
+
+        .receipt-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .delete-receipt-btn {
+            padding: 4px 8px;
+            background: #ff3b30;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .delete-receipt-btn:hover {
+            background: #d72c24;
+            transform: scale(1.05);
+        }
+
         .merchant-short {
             font-weight: 500;
         }
@@ -397,6 +569,115 @@
 
         .refresh-btn:hover {
             background: #0051d5;
+        }
+
+        .update-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 16px 40px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s;
+            min-width: 300px;
+        }
+
+        .update-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .update-btn:disabled {
+            background: #d1d1d6;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .update-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .clear-btn {
+            background: #ff9500;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            min-width: 180px;
+        }
+
+        .clear-btn:hover:not(:disabled) {
+            background: #ff8800;
+            transform: translateY(-1px);
+        }
+
+        .clear-btn:disabled {
+            background: #d1d1d6;
+            cursor: not-allowed;
+        }
+
+        .delete-btn {
+            background: #ff3b30;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            min-width: 180px;
+        }
+
+        .delete-btn:hover:not(:disabled) {
+            background: #d72c24;
+            transform: translateY(-1px);
+        }
+
+        .delete-btn:disabled {
+            background: #d1d1d6;
+            cursor: not-allowed;
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 30px 0 20px 0;
+        }
+
+        .learn-btn {
+            background: linear-gradient(135deg, #34c759 0%, #30d158 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            min-width: 180px;
+            box-shadow: 0 4px 15px rgba(52, 199, 89, 0.3);
+        }
+
+        .learn-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #30d158 0%, #34c759 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 199, 89, 0.5);
+        }
+
+        .learn-btn:disabled {
+            background: #d1d1d6;
+            cursor: not-allowed;
+            box-shadow: none;
         }
 
         .header-actions {
@@ -478,10 +759,18 @@
 <body>
     <div class="container">
         <header>
-            <h1>📋 Receipt Checker</h1>
-            <p class="subtitle">Bank statement receipt matching dashboard</p>
-            <div class="header-actions">
-                <button class="refresh-btn" onclick="loadAll()">🔄 Refresh</button>
+            <div class="header-top">
+                <div class="header-title">
+                    <h1>💰 SWEET DUDE SWEET DUDE SWEET DUDE SWEET 💰</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="refresh-btn" onclick="loadAll()">🔄 Refresh</button>
+                    <button class="refresh-btn" onclick="undoLastAction()" id="header-undo-btn" disabled>↶ Undo</button>
+                </div>
+            </div>
+            <p class="subtitle">The Sweetest Receipt Matcher You Ever Did See</p>
+            <div class="header-statement-tabs" id="header-statement-tabs">
+                <div class="loading" style="font-size: 13px; color: #86868b;">Loading statements...</div>
             </div>
         </header>
 
@@ -501,9 +790,21 @@
             </div>
         </div>
 
-        <div class="statement-tabs" id="statement-tabs">
-            <div class="loading" style="width: 100%;">Loading statements...</div>
+        <div class="action-buttons">
+            <button id="update-btn" class="update-btn" onclick="runMatching()" disabled>
+                <span id="update-btn-text">🔄 UPDATE - Match Receipts</span>
+                <span id="update-btn-spinner" style="display: none;">⏳ Processing...</span>
+            </button>
+            <button id="clear-btn" class="clear-btn" onclick="clearStatement()" disabled>
+                🔄 CLEAR - Reset Statement
+            </button>
+            <button id="delete-btn" class="delete-btn" onclick="deleteStatement()" disabled>
+                🗑️ DELETE - Remove Statement
+            </button>
         </div>
+        <div id="match-progress" style="margin-top: 10px; text-align: center; font-size: 14px; color: #86868b;"></div>
+
+        <!-- Statement tabs moved to header -->
 
         <div class="folder-links" id="folder-links" style="display: none; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px;">
             <div style="font-size: 12px; font-weight: 600; color: #86868b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">Statement Folders</div>
@@ -530,9 +831,12 @@
                 <div class="stat-value missing" id="stat-missing">-</div>
                 <div class="stat-label">Missing Receipts</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card" style="position: relative;">
                 <div class="stat-value completion" id="stat-completion">-</div>
                 <div class="stat-label">Completion %</div>
+                <button id="learn-btn-card" class="learn-btn" onclick="updateLearning()" disabled style="display: none; position: absolute; right: 20px; top: 50%; transform: translateY(-50%); min-width: auto; padding: 8px 16px; font-size: 12px;">
+                    🧠 Learn
+                </button>
             </div>
         </div>
 
@@ -558,6 +862,7 @@
                             <th>Amount</th>
                             <th>Description</th>
                             <th>Status</th>
+                            <th class="center-header">Private</th>
                             <th>No Receipt</th>
                             <th>Receipt</th>
                         </tr>
@@ -589,6 +894,19 @@
         </div>
     </div>
 
+    <!-- Replace Receipt Modal -->
+    <div class="description-modal" id="replace-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">Replace Existing Receipt</div>
+            <div class="modal-body" id="replace-message" style="margin-bottom: 20px;"></div>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button id="replace-delete-btn" class="modal-close" style="background: #ff3b30;">Replace & Delete</button>
+                <button id="replace-restore-btn" class="modal-close" style="background: #ff9500;">Replace & Restore</button>
+                <button id="replace-cancel-btn" class="modal-close" style="background: #86868b;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentFilter = 'all';
         let currentStatement = null;
@@ -597,21 +915,49 @@
             // Extract merchant name from transaction description
             if (!description) return 'Unknown';
             
-            // Take first 3-4 words or until we hit reference numbers
+            // Common patterns to identify and extract merchant names
+            
+            // Pattern 1: "Ihr Einkauf bei [Merchant]" or "Your purchase at [Merchant]"
+            let match = description.match(/(?:Ihr Einkauf bei|Your purchase at|bei)\s+([A-Za-z0-9]+(?:\s+[A-Za-z0-9]+)?)/i);
+            if (match) return match[1];
+            
+            // Pattern 2: "PP.[digits].PP/. [Merchant]" (PayPal format)
+            match = description.match(/PP\.\d+\.PP\/\.\s+([^,]+?)(?:\s*EREF|,|$)/i);
+            if (match) return match[1].trim();
+            
+            // Pattern 3: Look for merchant before "EREF" or similar references
+            match = description.match(/^([^\/]+?)(?:\s+EREF|\s+MREF|\s+CRED|\s+Mandatsreferenz)/i);
+            if (match) {
+                let merchant = match[1].trim();
+                // Clean up common prefixes/suffixes
+                merchant = merchant.replace(/^(\d{2,}\/\d{4}\s+|K-NR\.\s+\d+\s+)/i, '');
+                // Take first meaningful words (max 3)
+                const words = merchant.split(/\s+/).filter(w => w.length > 2 && !w.match(/^\d+$/));
+                return words.slice(0, 3).join(' ') || merchant.substring(0, 30);
+            }
+            
+            // Pattern 4: "Invoice/Rechnung" - extract what comes after
+            match = description.match(/(?:Rechnung|Invoice|Ihre Rechnung).*?(?:bei|at|für|for)\s+([A-Za-z0-9]+)/i);
+            if (match) return match[1];
+            
+            // Fallback: Take first meaningful words (skip dates, numbers, short words)
             const words = description.split(/\s+/);
             const merchant = [];
             
-            for (let i = 0; i < Math.min(words.length, 4); i++) {
+            for (let i = 0; i < Math.min(words.length, 5); i++) {
                 const word = words[i];
-                // Stop at reference codes (EREF, MREF, etc)
-                if (word.match(/^(EREF|MREF|CRED|IBAN|BIC|Mandatsreferenz)/i)) {
-                    break;
-                }
-                // Skip very short or numeric-only words
-                if (word.length > 2 && !word.match(/^\d+$/)) {
-                    merchant.push(word);
-                }
-                if (merchant.length >= 3) break;
+                
+                // Stop at reference codes
+                if (word.match(/^(EREF|MREF|CRED|IBAN|BIC|Mandatsreferenz|PP\.|SVWZ)/i)) break;
+                
+                // Skip: dates (dd/mm, dd.mm), pure numbers, very short words
+                if (word.match(/^\d{1,2}[\.\/]\d{1,2}/) || word.match(/^\d+$/) || word.length <= 2) continue;
+                
+                // Skip common German transaction words
+                if (word.match(/^(von|für|per|am|zum|zur|der|die|das|Abrechnung|Abschluss)$/i)) continue;
+                
+                merchant.push(word);
+                if (merchant.length >= 2) break; // Just 2 words max for cleaner display
             }
             
             return merchant.join(' ') || description.substring(0, 30);
@@ -637,44 +983,126 @@
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 closeDescriptionModal();
+                document.getElementById('replace-modal').style.display = 'none';
             }
         });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + U = Undo
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault();
+                const undoBtn = document.getElementById('undo-btn');
+                if (!undoBtn.disabled) {
+                    undoLastAction();
+                }
+            }
+            
+            // Ctrl/Cmd + Enter = Run matching
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                const updateBtn = document.getElementById('update-btn');
+                if (!updateBtn.disabled) {
+                    runMatching();
+                }
+            }
+            
+            // Ctrl/Cmd + R = Reload all data
+            if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+                e.preventDefault();
+                if (currentStatement) {
+                    loadAll();
+                    showToast('Data refreshed', 'success');
+                }
+            }
+            
+            // Tab switching with numbers
+            if (e.key >= '1' && e.key <= '5') {
+                const tabs = document.querySelectorAll('.tab');
+                const index = parseInt(e.key) - 1;
+                if (tabs[index]) {
+                    tabs[index].click();
+                }
+            }
+        });
+        
+        // Show keyboard shortcuts hint
+        console.log('%c💰 SWEET DUDE SWEET - Keyboard Shortcuts:', 'font-size: 16px; font-weight: bold; color: #FFD700;');
+        console.log('%cCtrl/Cmd + Z: Undo last assignment', 'color: #667eea;');
+        console.log('%cCtrl/Cmd + Enter: Run matching', 'color: #667eea;');
+        console.log('%cCtrl/Cmd + R: Refresh data', 'color: #667eea;');
+        console.log('%c1-5: Switch tabs', 'color: #667eea;');
+        console.log('%cEsc: Close modals', 'color: #667eea;');
 
         // Drag and drop for statement
-        const statementDropzone = document.getElementById('statement-dropzone');
-        statementDropzone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            statementDropzone.classList.add('dragging');
-        });
-        statementDropzone.addEventListener('dragleave', () => {
-            statementDropzone.classList.remove('dragging');
-        });
-        statementDropzone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            statementDropzone.classList.remove('dragging');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleStatementUpload(files[0]);
-            }
-        });
+        function setupStatementDropzone() {
+            const statementDropzone = document.getElementById('statement-dropzone');
+            if (!statementDropzone) return;
+            
+            statementDropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                statementDropzone.classList.add('dragging');
+            });
+            
+            statementDropzone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                statementDropzone.classList.remove('dragging');
+            });
+            
+            statementDropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                statementDropzone.classList.remove('dragging');
+                
+                const files = e.dataTransfer.files;
+                console.log('Statement files dropped:', files);
+                
+                if (files.length > 0) {
+                    handleStatementUpload(files[0]);
+                } else {
+                    showToast('No file detected', 'error');
+                }
+            });
+        }
+        
+        setupStatementDropzone();
 
         // Drag and drop for receipts
-        const receiptsDropzone = document.getElementById('receipts-dropzone');
-        receiptsDropzone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            receiptsDropzone.classList.add('dragging');
-        });
-        receiptsDropzone.addEventListener('dragleave', () => {
-            receiptsDropzone.classList.remove('dragging');
-        });
-        receiptsDropzone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            receiptsDropzone.classList.remove('dragging');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleReceiptsUpload(files);
-            }
-        });
+        function setupReceiptsDropzone() {
+            const receiptsDropzone = document.getElementById('receipts-dropzone');
+            if (!receiptsDropzone) return;
+            
+            receiptsDropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                receiptsDropzone.classList.add('dragging');
+            });
+            
+            receiptsDropzone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                receiptsDropzone.classList.remove('dragging');
+            });
+            
+            receiptsDropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                receiptsDropzone.classList.remove('dragging');
+                
+                const files = e.dataTransfer.files;
+                console.log('Receipt files dropped:', files);
+                
+                if (files.length > 0) {
+                    handleReceiptsUpload(files);
+                } else {
+                    showToast('No files detected', 'error');
+                }
+            });
+        }
+        
+        setupReceiptsDropzone();
 
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
@@ -687,23 +1115,52 @@
         }
 
         async function uploadStatement(input) {
+            // Restrict to single file only
+            if (input.files.length > 1) {
+                showToast('Please upload only one statement file at a time', 'error');
+                input.value = ''; // Clear the input
+                return;
+            }
+            
             if (input.files.length > 0) {
                 await handleStatementUpload(input.files[0]);
             }
         }
 
         async function handleStatementUpload(file) {
+            console.log('Uploading statement file:', file.name, file.type, file.size);
+            
+            // Prompt for label/name for this statement
+            const defaultLabel = file.name.replace(/\.(csv|xlsx|xls)$/i, '');
+            const label = prompt(`Enter a label for this statement:\n(Leave blank to use filename)`, defaultLabel);
+            
+            // If user cancelled the prompt, abort upload
+            if (label === null) {
+                showToast('Upload cancelled', 'error');
+                return;
+            }
+            
+            const finalLabel = label.trim() || defaultLabel;
+            
             const formData = new FormData();
             formData.append('file', file);
 
             try {
+                showToast('Uploading statement...', 'success');
+                
                 const response = await fetch('/api/upload/statement', {
                     method: 'POST',
                     body: formData
                 });
+                
+                console.log('Upload response status:', response.status);
                 const data = await response.json();
+                console.log('Upload response data:', data);
                 
                 if (data.success) {
+                    // Save the label to localStorage
+                    localStorage.setItem(`statement_label_${data.filename}`, finalLabel);
+                    
                     showToast(data.message, 'success');
                     await loadStatements();
                     loadAll();
@@ -712,7 +1169,7 @@
                 }
             } catch (error) {
                 console.error('Error uploading statement:', error);
-                showToast('Upload failed', 'error');
+                showToast('Upload failed: ' + error.message, 'error');
             }
         }
 
@@ -760,11 +1217,12 @@
                 const response = await fetch('/api/statements');
                 const statements = await response.json();
                 
-                const tabsContainer = document.getElementById('statement-tabs');
+                // Render tabs in header instead of old location
+                const tabsContainer = document.getElementById('header-statement-tabs');
                 tabsContainer.innerHTML = '';
                 
                 if (statements.length === 0) {
-                    tabsContainer.innerHTML = '<p style="color: #86868b; padding: 10px;">No statements uploaded yet</p>';
+                    tabsContainer.innerHTML = '<p style="color: #86868b; font-size: 13px;">No statements uploaded yet</p>';
                     document.getElementById('folder-links').style.display = 'none';
                     return;
                 }
@@ -772,7 +1230,16 @@
                 statements.forEach((statement, index) => {
                     const btn = document.createElement('button');
                     btn.className = 'statement-tab' + (index === 0 ? ' active' : '');
-                    btn.textContent = statement.name.replace(/\.(csv|xlsx|xls)$/i, '');
+                    
+                    // Get label from localStorage or use filename
+                    const label = localStorage.getItem(`statement_label_${statement.name}`) || statement.name.replace(/\.(csv|xlsx|xls)$/i, '');
+                    
+                    const labelSpan = document.createElement('span');
+                    labelSpan.className = 'statement-tab-label';
+                    labelSpan.textContent = label;
+                    labelSpan.title = statement.name; // Show full filename on hover
+                    
+                    btn.appendChild(labelSpan);
                     btn.onclick = () => selectStatement(statement, btn);
                     tabsContainer.appendChild(btn);
                     
@@ -817,6 +1284,7 @@
             document.querySelectorAll('.statement-tab').forEach(t => t.classList.remove('active'));
             element.classList.add('active');
             updateFolderLinks(statement);
+            updateUpdateButton();
             loadAll();
         }
 
@@ -833,6 +1301,16 @@
                 document.getElementById('stat-no-receipt').textContent = data.no_receipt_needed || 0;
                 document.getElementById('stat-missing').textContent = data.missing || 0;
                 document.getElementById('stat-completion').textContent = (data.completion_rate || 0) + '%';
+                
+                // Show "Update Learning" button if 100% complete
+                const learnBtnCard = document.getElementById('learn-btn-card');
+                if (data.completion_rate === 100 && currentStatement) {
+                    learnBtnCard.style.display = 'block';
+                    learnBtnCard.disabled = false;
+                } else {
+                    learnBtnCard.style.display = 'none';
+                    learnBtnCard.disabled = true;
+                }
             } catch (error) {
                 console.error('Error loading summary:', error);
             }
@@ -860,6 +1338,9 @@
                 
                 transactions.forEach(tx => {
                     const row = document.createElement('tr');
+                    row.setAttribute('data-row', tx.row);
+                    row.setAttribute('data-receipt', tx.receipt || '');
+                    row.setAttribute('data-matched', tx.matched);
                     
                     // Add class if no receipt needed
                     if (tx.no_receipt_needed) {
@@ -880,6 +1361,11 @@
                     
                     const merchantShort = extractMerchant(tx.description);
                     
+                    // Get ownership status - now supports both Mark and Flo being active
+                    const ownerMark = tx.owner_mark || false;
+                    const ownerFlo = tx.owner_flo || false;
+                    const ownershipDisabled = tx.matched ? 'disabled' : '';
+                    
                     row.innerHTML = `
                         <td>${tx.row}</td>
                         <td>${tx.date}</td>
@@ -888,14 +1374,34 @@
                             <span class="merchant-short">${merchantShort}</span>
                         </td>
                         <td>${statusBadge}</td>
+                        <td style="text-align: center;">
+                            <div class="ownership-buttons-container">
+                                <button class="ownership-btn ${ownerMark ? 'active' : ''} ${ownershipDisabled}" 
+                                        onclick="toggleOwnerButton(${tx.row}, 'mark', event)">
+                                    Mark
+                                </button>
+                                <button class="ownership-btn ${ownerFlo ? 'active' : ''} ${ownershipDisabled}" 
+                                        onclick="toggleOwnerButton(${tx.row}, 'flo', event)">
+                                    Flo
+                                </button>
+                            </div>
+                        </td>
                         <td class="checkbox-cell">
                             <input type="checkbox" 
                                    ${tx.no_receipt_needed ? 'checked' : ''} 
                                    onchange="toggleNoReceipt(${tx.row}, this.checked)"
                                    ${tx.matched ? 'disabled' : ''}>
                         </td>
-                        <td><span class="receipt-name">${tx.receipt || '-'}</span></td>
+                        <td>
+                            <div class="receipt-cell">
+                                <span class="receipt-name">${tx.receipt || '-'}</span>
+                                ${tx.receipt && tx.receipt !== '-' ? `<button class="delete-receipt-btn" onclick="deleteReceipt(${tx.row}, '${tx.receipt.replace(/'/g, "&apos;")}', event)">✕</button>` : ''}
+                            </div>
+                        </td>
                     `;
+                    
+                    // Add drag-and-drop handlers
+                    setupRowDragAndDrop(row);
                     
                     tbody.appendChild(row);
                 });
@@ -909,7 +1415,7 @@
         }
 
         async function loadReceipts() {
-            try:
+            try {
                 const url = currentStatement
                     ? `/api/receipts?statement=${encodeURIComponent(currentStatement)}`
                     : '/api/receipts';
@@ -984,6 +1490,112 @@
             }
         }
 
+        function setupRowDragAndDrop(row) {
+            row.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                row.classList.add('drag-over');
+            });
+            
+            row.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                row.classList.remove('drag-over');
+            });
+            
+            row.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                row.classList.remove('drag-over');
+                
+                const files = e.dataTransfer.files;
+                if (files.length === 0) {
+                    showToast('No files detected', 'error');
+                    return;
+                }
+                
+                if (files.length > 1) {
+                    showToast('Please drop only one file at a time', 'error');
+                    return;
+                }
+                
+                const file = files[0];
+                const rowNumber = row.getAttribute('data-row');
+                const existingReceipt = row.getAttribute('data-receipt');
+                const isMatched = row.getAttribute('data-matched') === 'true';
+                
+                // Check if row already has a receipt
+                if (existingReceipt && existingReceipt !== '' && existingReceipt !== '-') {
+                    // Show confirmation dialog
+                    showReplaceDialog(rowNumber, file, existingReceipt);
+                } else {
+                    // No existing receipt, just assign
+                    await assignReceiptToRow(rowNumber, file, 'replace');
+                }
+            });
+        }
+
+        async function assignReceiptToRow(rowNumber, file, action = 'replace') {
+            if (!currentStatement) {
+                showToast('Please select a statement first', 'error');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('statement', currentStatement);
+            formData.append('row', rowNumber);
+            formData.append('action', action);
+            
+            try {
+                showToast('Assigning receipt...', 'success');
+                
+                const response = await fetch('/api/assign-receipt', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(`✓ Receipt assigned to row ${rowNumber}`, 'success');
+                    loadAll(); // Reload all data
+                    checkUndoAvailable(); // Update undo button state
+                } else {
+                    showToast(data.error || 'Failed to assign receipt', 'error');
+                }
+            } catch (error) {
+                console.error('Error assigning receipt:', error);
+                showToast('Error assigning receipt', 'error');
+            }
+        }
+
+        function showReplaceDialog(rowNumber, file, existingReceipt) {
+            const modal = document.getElementById('replace-modal');
+            const message = document.getElementById('replace-message');
+            const replaceBtn = document.getElementById('replace-delete-btn');
+            const restoreBtn = document.getElementById('replace-restore-btn');
+            const cancelBtn = document.getElementById('replace-cancel-btn');
+            
+            message.textContent = `Row ${rowNumber} already has receipt: ${existingReceipt}`;
+            
+            replaceBtn.onclick = async () => {
+                modal.style.display = 'none';
+                await assignReceiptToRow(rowNumber, file, 'replace');
+            };
+            
+            restoreBtn.onclick = async () => {
+                modal.style.display = 'none';
+                await assignReceiptToRow(rowNumber, file, 'restore');
+            };
+            
+            cancelBtn.onclick = () => {
+                modal.style.display = 'none';
+            };
+            
+            modal.style.display = 'flex';
+        }
+
         function switchTab(tab, element) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             element.classList.add('active');
@@ -1001,6 +1613,97 @@
             } else {
                 document.getElementById('transactions-section').style.display = 'block';
                 loadTransactions(tab);
+            }
+        }
+
+        async function toggleOwnerButton(row, owner, event) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            if (!currentStatement) {
+                showToast('Please select a statement first', 'error');
+                return;
+            }
+
+            const button = event.currentTarget;
+            if (button.classList.contains('disabled')) {
+                return; // Don't allow toggling if matched
+            }
+
+            // Toggle the button state
+            const isActive = button.classList.contains('active');
+            const newState = !isActive;
+
+            try {
+                const response = await fetch('/api/set-ownership', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        statement: currentStatement,
+                        row: row,
+                        owner: owner,  // 'mark' or 'flo'
+                        active: newState
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    const ownerName = owner.charAt(0).toUpperCase() + owner.slice(1);
+                    const action = newState ? 'assigned to' : 'removed from';
+                    showToast(`${ownerName} ${action} transaction`, 'success');
+                    loadAll(); // Reload data
+                } else {
+                    showToast(data.error || 'Failed to update ownership', 'error');
+                }
+            } catch (error) {
+                console.error('Error setting ownership:', error);
+                showToast('Error updating ownership', 'error');
+            }
+        }
+
+        async function deleteReceipt(row, filename, event) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            if (!currentStatement) {
+                showToast('Please select a statement first', 'error');
+                return;
+            }
+            
+            if (!confirm(`Remove receipt "${filename}" from row ${row}?\n\nThe file will be moved back to the receipts folder.`)) {
+                return;
+            }
+            
+            try {
+                showToast('Removing receipt...', 'success');
+                
+                const response = await fetch('/api/delete-receipt-assignment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        statement: currentStatement,
+                        row: row,
+                        filename: filename
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(`✓ Receipt removed from row ${row}`, 'success');
+                    loadAll();
+                    checkUndoAvailable();
+                } else {
+                    showToast(data.error || 'Failed to remove receipt', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting receipt:', error);
+                showToast('Error removing receipt', 'error');
             }
         }
 
@@ -1033,9 +1736,290 @@
             }
         }
 
+        async function runMatching() {
+            if (!currentStatement) {
+                showToast('Please select a statement first', 'error');
+                return;
+            }
+            
+            const updateBtn = document.getElementById('update-btn');
+            const btnText = document.getElementById('update-btn-text');
+            const btnSpinner = document.getElementById('update-btn-spinner');
+            const progress = document.getElementById('match-progress');
+            
+            // Disable button and show spinner
+            updateBtn.disabled = true;
+            btnText.style.display = 'none';
+            btnSpinner.style.display = 'inline';
+            progress.textContent = 'Scanning receipts and matching...';
+            
+            try {
+                const response = await fetch('/api/match-receipts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        statement: currentStatement
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    progress.textContent = `✓ Matched ${data.matched} of ${data.total_receipts} receipts`;
+                    
+                    // Refresh all data
+                    await loadAll();
+                    
+                    // Clear progress after 3 seconds
+                    setTimeout(() => {
+                        progress.textContent = '';
+                    }, 3000);
+                } else {
+                    showToast(data.error || 'Matching failed', 'error');
+                    progress.textContent = '✗ Matching failed';
+                }
+            } catch (error) {
+                console.error('Error running matching:', error);
+                showToast('Matching failed: ' + error.message, 'error');
+                progress.textContent = '✗ Error occurred';
+            } finally {
+                // Re-enable button
+                updateBtn.disabled = false;
+                btnText.style.display = 'inline';
+                btnSpinner.style.display = 'none';
+            }
+        }
+
+        async function clearStatement() {
+            if (!currentStatement) {
+                showToast('Please select a statement first', 'error');
+                return;
+            }
+            
+            // Confirmation dialog
+            if (!confirm(`Are you sure you want to CLEAR/RESET this statement?\n\n"${currentStatement}"\n\nThis will:\n• Move all matched receipts back to receipts folder\n• Delete all match data\n\nYou can re-run matching afterwards.`)) {
+                return;
+            }
+            
+            const clearBtn = document.getElementById('clear-btn');
+            const progress = document.getElementById('match-progress');
+            
+            clearBtn.disabled = true;
+            progress.textContent = 'Resetting statement...';
+            
+            try {
+                const response = await fetch('/api/clear-statement', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        statement: currentStatement,
+                        confirm: true
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    progress.textContent = `✓ Reset complete: ${data.receipts_moved} receipts moved back`;
+                    
+                    // Refresh all data
+                    await loadAll();
+                    
+                    setTimeout(() => {
+                        progress.textContent = '';
+                    }, 3000);
+                } else {
+                    showToast(data.error || 'Clear failed', 'error');
+                    progress.textContent = '✗ Clear failed';
+                }
+            } catch (error) {
+                console.error('Error clearing statement:', error);
+                showToast('Clear failed: ' + error.message, 'error');
+                progress.textContent = '✗ Error occurred';
+            } finally {
+                clearBtn.disabled = false;
+            }
+        }
+
+        async function deleteStatement() {
+            if (!currentStatement) {
+                showToast('Please select a statement first', 'error');
+                return;
+            }
+            
+            // Confirmation dialog
+            if (!confirm(`⚠️ WARNING: You are about to DELETE this statement and ALL associated data!\n\n"${currentStatement}"\n\nThis will PERMANENTLY delete:\n• The statement file\n• All receipts in the folder\n• All matched receipts\n• All match data\n\nThis action CANNOT be undone!\n\nAre you sure you want to continue?`)) {
+                return;
+            }
+            
+            const deleteBtn = document.getElementById('delete-btn');
+            const progress = document.getElementById('match-progress');
+            
+            deleteBtn.disabled = true;
+            progress.textContent = 'Deleting statement...';
+            
+            try {
+                const response = await fetch('/api/delete-statement', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        statement: currentStatement,
+                        confirm: true
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    progress.textContent = `✓ Statement deleted`;
+                    
+                    // Clear current statement
+                    currentStatement = null;
+                    
+                    // Reload statements list
+                    await loadStatements();
+                    await loadAll();
+                    
+                    setTimeout(() => {
+                        progress.textContent = '';
+                    }, 3000);
+                } else {
+                    showToast(data.error || 'Delete failed', 'error');
+                    progress.textContent = '✗ Delete failed';
+                }
+            } catch (error) {
+                console.error('Error deleting statement:', error);
+                showToast('Delete failed: ' + error.message, 'error');
+                progress.textContent = '✗ Error occurred';
+            } finally {
+                deleteBtn.disabled = false;
+            }
+        }
+
+        async function updateLearning() {
+            if (!currentStatement) {
+                showToast('Please select a statement first', 'error');
+                return;
+            }
+            
+            if (!confirm('Update learning model with this statement?\n\nThis will use all matched receipts to improve future recognition accuracy.')) {
+                return;
+            }
+            
+            try {
+                showToast('Updating learning model...', 'success');
+                
+                const response = await fetch('/api/update-learning', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        statement: currentStatement
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(`✓ Learning updated! Processed ${data.receipts_processed} receipts`, 'success');
+                } else {
+                    showToast(data.error || 'Failed to update learning', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating learning:', error);
+                showToast('Error updating learning', 'error');
+            }
+        }
+
+        function updateUpdateButton() {
+            const updateBtn = document.getElementById('update-btn');
+            const headerUndoBtn = document.getElementById('header-undo-btn');
+            const clearBtn = document.getElementById('clear-btn');
+            const deleteBtn = document.getElementById('delete-btn');
+            
+            if (currentStatement) {
+                updateBtn.disabled = false;
+                clearBtn.disabled = false;
+                deleteBtn.disabled = false;
+                checkUndoAvailable(); // Check if undo is available
+            } else {
+                updateBtn.disabled = true;
+                if (headerUndoBtn) headerUndoBtn.disabled = true;
+                clearBtn.disabled = true;
+                deleteBtn.disabled = true;
+            }
+        }
+        
+        async function checkUndoAvailable() {
+            if (!currentStatement) return;
+            
+            try {
+                const response = await fetch(`/api/undo-history?statement=${encodeURIComponent(currentStatement)}`);
+                const data = await response.json();
+                
+                const headerUndoBtn = document.getElementById('header-undo-btn');
+                
+                if (headerUndoBtn) {
+                    headerUndoBtn.disabled = data.count === 0;
+                    if (data.count > 0) {
+                        headerUndoBtn.textContent = `↶ Undo (${data.count})`;
+                    } else {
+                        headerUndoBtn.textContent = '↶ Undo';
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking undo availability:', error);
+            }
+        }
+        
+        async function undoLastAction() {
+            if (!currentStatement) {
+                showToast('Please select a statement first', 'error');
+                return;
+            }
+            
+            try {
+                showToast('Undoing last action...', 'success');
+                
+                const response = await fetch('/api/undo', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        statement: currentStatement
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    loadAll(); // Reload all data
+                    checkUndoAvailable(); // Update undo button state
+                } else {
+                    showToast(data.error || 'Failed to undo', 'error');
+                }
+            } catch (error) {
+                console.error('Error undoing action:', error);
+                showToast('Error undoing action', 'error');
+            }
+        }
+
         function loadAll() {
             loadSummary();
             loadTransactions(currentFilter);
+            updateUpdateButton();
         }
 
         window.onload = function() {

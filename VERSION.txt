@@ -1,0 +1,33 @@
+Receipt Checker v2.1.2
+Build Date: February 10, 2026 (Update 4)
+Status: Production Ready
+
+Latest Changes (v2.1.2):
+- Removed CAPTCHA from delete function (single confirmation only)
+
+UI Improvements (v2.1.1):
+- Statement tabs moved to header (cleaner layout)
+- Label prompt when uploading statements (user-friendly names)
+- Single file restriction for statement uploads (prevents errors)
+- Custom labels stored in localStorage (persistent)
+
+Matching Features:
+- Enhanced matching with date guidance (not required, but helps)
+- Currency conversion detection (auto-detect USD/GBP)
+- 20% tolerance for non-EUR (exchange rates + fees)
+- Multi-tier merchant validation (30-75+ score tiers)
+- Hidden _matches.csv files from UI tabs
+
+Web UI Features:
+- Clear button (reset statement)
+- Delete button (single confirmation, no CAPTCHA)
+- Statement tabs in header with custom labels
+- Single file upload restriction
+
+Test Results:
+- 2/4 receipts matched (Midjourney, Panoee)
+- 100% accuracy (no false positives)
+- Currency conversion working (USD receipts matched to EUR transactions)
+
+Web Interface: http://127.0.0.1:5001
+Documentation: UI_UPDATE_SUMMARY.md, BUILD_LOG.md, README_CURRENT_STATUS.md

@@ -33,10 +33,11 @@ def cli():
 @click.option('--date-column', default='Date', help='Name of date column in statement')
 @click.option('--amount-column', default='Amount', help='Name of amount column in statement')
 @click.option('--description-column', default='Description', help='Name of description column in statement')
-@click.option('--date-tolerance', default=3, help='Days tolerance for date matching')
-@click.option('--amount-tolerance', default=0.01, help='Percentage tolerance for amount matching')
+@click.option('--date-tolerance', default=None, help='DEPRECATED - dates no longer used for matching')
+@click.option('--amount-tolerance', default=0.001, help='Percentage tolerance for EUR amount matching (0.001 = 0.1% - essentially exact)')
+@click.option('--amount-tolerance-non-eur', default=0.20, help='Percentage tolerance for non-EUR amounts (0.20 = 20% for exchange rates + fees)')
 def match(statement_file, receipts_folder, output, date_column, amount_column, 
-         description_column, date_tolerance, amount_tolerance):
+         description_column, date_tolerance, amount_tolerance, amount_tolerance_non_eur):
     """Match transactions with receipts"""
     
     console.print("\n[bold blue]Receipt Checker[/bold blue] :receipt:\n")
@@ -66,9 +67,12 @@ def match(statement_file, receipts_folder, output, date_column, amount_column,
     
     # Match transactions with receipts
     console.print("[yellow]Matching transactions with receipts...[/yellow]")
+    console.print(f"[dim]Amount tolerance: EUR ±{amount_tolerance*100}%, Non-EUR ±{amount_tolerance_non_eur*100}%[/dim]")
+    console.print(f"[dim]Note: Dates no longer required (receipts can be weeks apart)[/dim]\n")
+    
     matcher = ReceiptMatcher(
-        date_tolerance_days=date_tolerance,
-        amount_tolerance_percent=amount_tolerance
+        amount_tolerance_percent=amount_tolerance,
+        amount_tolerance_non_eur=amount_tolerance_non_eur
     )
     
     transactions = parser.get_transactions()

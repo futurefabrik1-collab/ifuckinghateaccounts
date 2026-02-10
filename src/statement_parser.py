@@ -77,14 +77,29 @@ class StatementParser:
         
         self.df = self.df.rename(columns=column_mapping)
         
-        # Convert date to datetime (handle German format)
+        # Convert date to datetime (handle German format DD.MM.YYYY)
         self.df['date'] = pd.to_datetime(self.df['date'], format='%d.%m.%Y', errors='coerce')
         if self.df['date'].isna().all():
             # Try other common formats
             self.df['date'] = pd.to_datetime(self.df['date'], errors='coerce')
         
-        # Convert amount to float (handle negative signs, currency symbols, German format)
-        self.df['amount'] = self.df['amount'].astype(str).str.replace('$', '').str.replace('€', '').str.replace('.', '').str.replace(',', '.')
+        # Convert amount to float (handle German number format: 1.234,56 -> 1234.56)
+        # German format: thousands separator is "." and decimal separator is ","
+        # We need to remove thousands separator and replace decimal separator
+        def convert_german_number(amount_str):
+            amount_str = str(amount_str).strip()
+            # Remove currency symbols
+            amount_str = amount_str.replace('$', '').replace('€', '').strip()
+            # German format: replace thousand separator (.) with nothing, then decimal separator (,) with .
+            # But we need to be careful: "1.234,56" vs "-3,26"
+            if ',' in amount_str:
+                # Has comma - this is the decimal separator in German format
+                amount_str = amount_str.replace('.', '')  # Remove thousand separator
+                amount_str = amount_str.replace(',', '.')  # Replace decimal separator
+            # else: no comma, might be whole number or already in English format
+            return amount_str
+        
+        self.df['amount'] = self.df['amount'].apply(convert_german_number)
         self.df['amount'] = pd.to_numeric(self.df['amount'], errors='coerce')
         
         # Add match status column
