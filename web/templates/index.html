@@ -1565,10 +1565,29 @@
                     const labelSpan = document.createElement('span');
                     labelSpan.className = 'statement-tab-label';
                     labelSpan.textContent = label;
-                    labelSpan.title = statement.name; // Show full filename on hover
+                    btn.title = `${statement.name}\nDouble-click to open folder`; // Show full filename and hint on hover
                     
                     btn.appendChild(labelSpan);
                     btn.onclick = () => selectStatement(statement, btn);
+                    btn.ondblclick = async () => {
+                        // Double-click to open statement folder
+                        try {
+                            const response = await fetch('/api/open-folder', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ path: `statements/${statement.name}` })
+                            });
+                            const result = await response.json();
+                            if (result.success) {
+                                showToast(result.message, 'success');
+                            } else {
+                                showToast(result.error || 'Failed to open folder', 'error');
+                            }
+                        } catch (err) {
+                            showToast('Error opening folder', 'error');
+                            console.error(err);
+                        }
+                    };
                     tabsContainer.appendChild(btn);
                     
                     if (index === 0) {
