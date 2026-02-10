@@ -554,6 +554,50 @@
             font-weight: 500;
         }
 
+        .invoice-btn {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 4px 10px;
+            background: linear-gradient(135deg, #007aff 0%, #0051d5 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            vertical-align: middle;
+        }
+
+        .invoice-btn:hover {
+            background: linear-gradient(135deg, #0051d5 0%, #007aff 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 122, 255, 0.3);
+        }
+
+        .learn-url-btn {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 4px 10px;
+            background: linear-gradient(135deg, #ff9500 0%, #ff8800 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            vertical-align: middle;
+        }
+
+        .learn-url-btn:hover {
+            background: linear-gradient(135deg, #ff8800 0%, #ff9500 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(255, 149, 0, 0.3);
+        }
+
         .refresh-btn {
             background: #007aff;
             color: white;
@@ -907,40 +951,204 @@
         </div>
     </div>
 
+    <!-- Learn Invoice URL Modal -->
+    <div class="description-modal" id="learn-url-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">Learn Invoice URL</div>
+            <div class="modal-body" style="margin-bottom: 20px;">
+                <p style="margin-bottom: 15px;">Add an invoice/billing URL for <strong id="learn-merchant-name"></strong></p>
+                <label style="display: block; margin-bottom: 5px; font-weight: 500;">Invoice URL:</label>
+                <input type="url" id="learn-url-input" placeholder="https://example.com/billing" 
+                       style="width: 100%; padding: 10px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 14px; margin-bottom: 10px;">
+                <p style="font-size: 12px; color: #86868b;">This URL will be saved for future transactions from this merchant.</p>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button id="learn-url-save-btn" class="modal-close" style="background: #007aff;">Save URL</button>
+                <button id="learn-url-cancel-btn" class="modal-close" style="background: #86868b;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentFilter = 'all';
         let currentStatement = null;
+
+        // Merchant invoice URL mapping
+        const merchantInvoiceUrls = {
+            'vodafone': 'https://www.vodafone.de/meinkabel/rechnungen',
+            'google': 'https://pay.google.com/gp/w/home/activity',
+            'paypal': 'https://www.paypal.com/myaccount/transactions',
+            'amazon': 'https://www.amazon.de/gp/your-account/order-history',
+            'amzn': 'https://www.amazon.de/gp/your-account/order-history',
+            'prime': 'https://www.amazon.de/gp/your-account/order-history',
+            'ebay': 'https://www.ebay.de/mye/myebay/purchase',
+            'spotify': 'https://www.spotify.com/de/account/subscription/',
+            'netflix': 'https://www.netflix.com/BillingActivity',
+            'apple': 'https://reportaproblem.apple.com/',
+            'microsoft': 'https://account.microsoft.com/billing/orders',
+            'telekom': 'https://geschaeftskunden.telekom.de/kundencenter/rechnungen',
+            'o2': 'https://www.o2online.de/mein-o2/rechnungen/',
+            'ionos': 'https://my.ionos.de/account/billing',
+            'strato': 'https://www.strato.de/apps/CustomerService',
+            'aws': 'https://console.aws.amazon.com/billing/',
+            'azure': 'https://portal.azure.com/#view/Microsoft_Azure_GTM/ModernBillingMenuBlade/~/Overview',
+            'digitalocean': 'https://cloud.digitalocean.com/billing',
+            'github': 'https://github.com/settings/billing',
+            'stripe': 'https://dashboard.stripe.com/invoices',
+            'payoneer': 'https://myaccount.payoneer.com/ma/billing/statements',
+            'wise': 'https://wise.com/user/account/statements',
+            'n26': 'https://app.n26.com/transactions',
+            'revolut': 'https://app.revolut.com/',
+            'rabot': 'https://www.rabot-charge.de/login',
+            'lidl': 'https://www.lidl.de/rechnung',
+            'rewe': 'https://shop.rewe.de/order-history',
+            'dm': 'https://www.dm.de/mein-dm/bestellungen',
+            'zalando': 'https://www.zalando.de/myaccount/orders/',
+        };
+
+        // Load learned URLs from localStorage
+        let learnedMerchantUrls = {};
+        
+        function loadLearnedUrls() {
+            const stored = localStorage.getItem('learnedMerchantUrls');
+            if (stored) {
+                try {
+                    learnedMerchantUrls = JSON.parse(stored);
+                } catch (e) {
+                    console.error('Error loading learned URLs:', e);
+                    learnedMerchantUrls = {};
+                }
+            }
+        }
+        
+        function saveLearnedUrls() {
+            localStorage.setItem('learnedMerchantUrls', JSON.stringify(learnedMerchantUrls));
+        }
+        
+        function getMerchantInvoiceUrl(merchantName) {
+            if (!merchantName) return null;
+            
+            const normalized = merchantName.toLowerCase().trim();
+            
+            // Check learned URLs first (user-defined takes priority)
+            for (const [key, url] of Object.entries(learnedMerchantUrls)) {
+                if (normalized.includes(key.toLowerCase())) {
+                    return url;
+                }
+            }
+            
+            // Then check built-in URLs
+            for (const [key, url] of Object.entries(merchantInvoiceUrls)) {
+                if (normalized.includes(key)) {
+                    return url;
+                }
+            }
+            
+            return null;
+        }
+        
+        function showLearnUrlModal(merchantName) {
+            const modal = document.getElementById('learn-url-modal');
+            const merchantNameEl = document.getElementById('learn-merchant-name');
+            const urlInput = document.getElementById('learn-url-input');
+            const saveBtn = document.getElementById('learn-url-save-btn');
+            const cancelBtn = document.getElementById('learn-url-cancel-btn');
+            
+            merchantNameEl.textContent = merchantName;
+            urlInput.value = '';
+            
+            saveBtn.onclick = () => {
+                const url = urlInput.value.trim();
+                if (!url) {
+                    showToast('Please enter a URL', 'error');
+                    return;
+                }
+                
+                // Validate URL
+                try {
+                    new URL(url);
+                } catch (e) {
+                    showToast('Please enter a valid URL (e.g., https://example.com)', 'error');
+                    return;
+                }
+                
+                // Save to learned URLs
+                learnedMerchantUrls[merchantName] = url;
+                saveLearnedUrls();
+                
+                showToast(`Learned URL for ${merchantName}! 🎓`, 'success');
+                modal.style.display = 'none';
+                
+                // Reload transactions to show the new button
+                loadTransactions(currentFilter);
+            };
+            
+            cancelBtn.onclick = () => {
+                modal.style.display = 'none';
+            };
+            
+            modal.style.display = 'flex';
+            urlInput.focus();
+        }
+        
+        // Load learned URLs on startup
+        loadLearnedUrls();
 
         function extractMerchant(description) {
             // Extract merchant name from transaction description
             if (!description) return 'Unknown';
             
-            // Common patterns to identify and extract merchant names
-            
-            // Pattern 1: "Ihr Einkauf bei [Merchant]" or "Your purchase at [Merchant]"
-            let match = description.match(/(?:Ihr Einkauf bei|Your purchase at|bei)\s+([A-Za-z0-9]+(?:\s+[A-Za-z0-9]+)?)/i);
-            if (match) return match[1];
-            
-            // Pattern 2: "PP.[digits].PP/. [Merchant]" (PayPal format)
-            match = description.match(/PP\.\d+\.PP\/\.\s+([^,]+?)(?:\s*EREF|,|$)/i);
-            if (match) return match[1].trim();
-            
-            // Pattern 3: Look for merchant before "EREF" or similar references
-            match = description.match(/^([^\/]+?)(?:\s+EREF|\s+MREF|\s+CRED|\s+Mandatsreferenz)/i);
-            if (match) {
-                let merchant = match[1].trim();
-                // Clean up common prefixes/suffixes
-                merchant = merchant.replace(/^(\d{2,}\/\d{4}\s+|K-NR\.\s+\d+\s+)/i, '');
-                // Take first meaningful words (max 3)
-                const words = merchant.split(/\s+/).filter(w => w.length > 2 && !w.match(/^\d+$/));
-                return words.slice(0, 3).join(' ') || merchant.substring(0, 30);
+            // Skip internal bank transactions
+            if (description.match(/^(Abschluss|Umsatzsteuer|MASTERCARD Abrechnung)/i)) {
+                return ''; // Return empty to hide Learn URL button
             }
             
-            // Pattern 4: "Invoice/Rechnung" - extract what comes after
-            match = description.match(/(?:Rechnung|Invoice|Ihre Rechnung).*?(?:bei|at|für|for)\s+([A-Za-z0-9]+)/i);
+            // Pattern 1: "Ihr Einkauf bei [Merchant]" (PayPal format) - check FIRST
+            let match = description.match(/Ihr Einkauf bei\s+([^,\s]+(?:\s+[^,\s]+)?)/i);
+            if (match) return match[1].trim();
+            
+            // Pattern 2: Amazon order numbers - extract AMZN/Prime
+            if (description.match(/AMZN\s+Mktp/i)) return 'Amazon';
+            if (description.match(/AMZNPrime/i)) return 'Amazon Prime';
+            if (description.match(/Prime\s+Video/i)) return 'Amazon Prime Video';
+            
+            // Pattern 3: "bei www.merchant.de" or "online bei merchant"
+            match = description.match(/(?:online\s+)?bei\s+(?:www\.)?([a-z0-9-]+)(?:\.|\/)/i);
             if (match) return match[1];
             
-            // Fallback: Take first meaningful words (skip dates, numbers, short words)
+            // Pattern 4: PayPal with transaction ID - clean it up
+            match = description.match(/^\d+\/(?:PP\.\d+\.)?PP\/\.\s+([^,]+?)(?:\s*,|\s*EREF|$)/i);
+            if (match) return match[1].trim();
+            
+            // Pattern 5: "digits/. Merchant" format (non-PayPal)
+            match = description.match(/^\d+\/\.\s+([^,]+?)(?:\s*,|\s*EREF|$)/i);
+            if (match) return match[1].trim();
+            
+            // Pattern 6: Look for merchant before "EREF" or similar references
+            match = description.match(/^([^\/]+?)(?:\s+EREF|\s+MREF|\s+CRED|\s+IBAN)/i);
+            if (match) {
+                let merchant = match[1].trim();
+                
+                // Skip if starts with order number pattern (D01-xxx or xxx-xxx-xxx)
+                if (merchant.match(/^[A-Z]\d{2}-\d+|^\d{3}-\d{7}/)) {
+                    // Try to find merchant after order number
+                    const parts = merchant.split(/\s+/);
+                    merchant = parts.slice(1).join(' ');
+                }
+                
+                // Clean up common prefixes
+                merchant = merchant.replace(/^(\d{2,}\/\d{4}\s+|K-NR\.\s+\d+\s+|Rechnung-Nr\.:\s*\S+\s+)/i, '');
+                
+                // Look for "bei [merchant]" within this text
+                const beiMatch = merchant.match(/bei\s+([a-zA-Z0-9]+)/i);
+                if (beiMatch) return beiMatch[1];
+                
+                // Take first meaningful words (max 2)
+                const words = merchant.split(/\s+/).filter(w => w.length > 2 && !w.match(/^\d+$/) && !w.match(/^[\d-]+$/));
+                return words.slice(0, 2).join(' ') || merchant.substring(0, 30);
+            }
+            
+            // Fallback: Take first meaningful words
             const words = description.split(/\s+/);
             const merchant = [];
             
@@ -948,16 +1156,16 @@
                 const word = words[i];
                 
                 // Stop at reference codes
-                if (word.match(/^(EREF|MREF|CRED|IBAN|BIC|Mandatsreferenz|PP\.|SVWZ)/i)) break;
+                if (word.match(/^(EREF|MREF|CRED|IBAN|BIC|Mandatsreferenz|SVWZ)/i)) break;
                 
-                // Skip: dates (dd/mm, dd.mm), pure numbers, very short words
-                if (word.match(/^\d{1,2}[\.\/]\d{1,2}/) || word.match(/^\d+$/) || word.length <= 2) continue;
+                // Skip: dates, pure numbers, order IDs, very short words
+                if (word.match(/^\d{1,2}[\.\/]\d{1,2}/) || word.match(/^\d+$/) || word.match(/^[A-Z]\d{2}-/) || word.length <= 2) continue;
                 
                 // Skip common German transaction words
                 if (word.match(/^(von|für|per|am|zum|zur|der|die|das|Abrechnung|Abschluss)$/i)) continue;
                 
                 merchant.push(word);
-                if (merchant.length >= 2) break; // Just 2 words max for cleaner display
+                if (merchant.length >= 2) break;
             }
             
             return merchant.join(' ') || description.substring(0, 30);
@@ -984,6 +1192,7 @@
             if (e.key === 'Escape') {
                 closeDescriptionModal();
                 document.getElementById('replace-modal').style.display = 'none';
+                document.getElementById('learn-url-modal').style.display = 'none';
             }
         });
 
@@ -1360,6 +1569,21 @@
                     }
                     
                     const merchantShort = extractMerchant(tx.description);
+                    const invoiceUrl = getMerchantInvoiceUrl(merchantShort);
+                    
+                    // Show invoice button if URL exists, otherwise show "Learn URL" button
+                    let invoiceButton = '';
+                    if (invoiceUrl) {
+                        invoiceButton = `<a href="${invoiceUrl}" target="_blank" class="invoice-btn" onclick="event.stopPropagation();">📄 Invoice</a>`;
+                    } else if (merchantShort && merchantShort !== 'Unknown' && merchantShort.length > 3) {
+                        const escapedMerchant = merchantShort
+                            .replace(/\\/g, '\\\\')
+                            .replace(/'/g, "\\'")
+                            .replace(/"/g, '\\"')
+                            .replace(/</g, '&lt;')
+                            .replace(/>/g, '&gt;');
+                        invoiceButton = `<button class="learn-url-btn" onclick="event.stopPropagation(); showLearnUrlModal('${escapedMerchant}');">+ Learn URL</button>`;
+                    }
                     
                     // Get ownership status - now supports both Mark and Flo being active
                     const ownerMark = tx.owner_mark || false;
@@ -1370,8 +1594,8 @@
                         <td>${tx.row}</td>
                         <td>${tx.date}</td>
                         <td class="amount ${amountClass}">€${tx.amount}</td>
-                        <td class="description" onclick="showDescriptionModal('${tx.description.replace(/'/g, "&apos;")}')">
-                            <span class="merchant-short">${merchantShort}</span>
+                        <td class="description" onclick="showDescriptionModal('${tx.description.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"')}')">
+                            <span class="merchant-short">${merchantShort || '(Internal)'}</span>${invoiceButton}
                         </td>
                         <td>${statusBadge}</td>
                         <td style="text-align: center;">
@@ -1395,7 +1619,7 @@
                         <td>
                             <div class="receipt-cell">
                                 <span class="receipt-name">${tx.receipt || '-'}</span>
-                                ${tx.receipt && tx.receipt !== '-' ? `<button class="delete-receipt-btn" onclick="deleteReceipt(${tx.row}, '${tx.receipt.replace(/'/g, "&apos;")}', event)">✕</button>` : ''}
+                                ${tx.receipt && tx.receipt !== '-' ? `<button class="delete-receipt-btn" onclick="deleteReceipt(${tx.row}, '${tx.receipt.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"')}', event)">✕</button>` : ''}
                             </div>
                         </td>
                     `;
