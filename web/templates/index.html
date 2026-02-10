@@ -830,6 +830,8 @@
                     <h1>💰 SWEET DUDE SWEET DUDE SWEET DUDE SWEET 💰</h1>
                 </div>
                 <div class="header-actions">
+                    <button class="refresh-btn" onclick="exportLearnedUrls()" title="Export learned invoice URLs">📥 Export URLs</button>
+                    <button class="refresh-btn" onclick="importLearnedUrls()" title="Import learned invoice URLs">📤 Import URLs</button>
                     <button class="refresh-btn" onclick="loadAll()">🔄 Refresh</button>
                     <button class="refresh-btn" onclick="undoLastAction()" id="header-undo-btn" disabled>↶ Undo</button>
                 </div>
@@ -1031,7 +1033,25 @@
         // Load learned URLs from localStorage
         let learnedMerchantUrls = {};
         
-        function loadLearnedUrls() {
+        async function loadLearnedUrls() {
+            // Try to load from server file first
+            try {
+                const response = await fetch('/api/learned-urls');
+                if (response.ok) {
+                    const serverUrls = await response.json();
+                    if (Object.keys(serverUrls).length > 0) {
+                        learnedMerchantUrls = serverUrls;
+                        // Sync to localStorage
+                        localStorage.setItem('learnedMerchantUrls', JSON.stringify(learnedMerchantUrls));
+                        console.log('✅ Loaded learned URLs from server file');
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not load from server, falling back to localStorage:', e);
+            }
+            
+            // Fallback to localStorage
             const stored = localStorage.getItem('learnedMerchantUrls');
             if (stored) {
                 try {
@@ -1043,8 +1063,68 @@
             }
         }
         
-        function saveLearnedUrls() {
+        async function saveLearnedUrls() {
+            // Save to localStorage
             localStorage.setItem('learnedMerchantUrls', JSON.stringify(learnedMerchantUrls));
+            
+            // Save to server file for persistence
+            try {
+                const response = await fetch('/api/learned-urls', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(learnedMerchantUrls)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('✅ Saved to server:', result.message);
+                } else {
+                    console.warn('Failed to save to server, but localStorage is updated');
+                }
+            } catch (e) {
+                console.warn('Could not save to server, but localStorage is updated:', e);
+            }
+        }
+        
+        async function exportLearnedUrls() {
+            const dataStr = JSON.stringify(learnedMerchantUrls, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'learned_invoice_urls.json';
+            link.click();
+            URL.revokeObjectURL(url);
+            showToast('Exported learned URLs! 📥', 'success');
+        }
+        
+        async function importLearnedUrls() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                try {
+                    const text = await file.text();
+                    const imported = JSON.parse(text);
+                    
+                    // Merge with existing URLs
+                    const count = Object.keys(imported).length;
+                    learnedMerchantUrls = { ...learnedMerchantUrls, ...imported };
+                    await saveLearnedUrls();
+                    
+                    showToast(`Imported ${count} learned URLs! 📤`, 'success');
+                    loadTransactions(currentFilter);
+                } catch (err) {
+                    showToast('Failed to import: Invalid JSON file', 'error');
+                    console.error('Import error:', err);
+                }
+            };
+            input.click();
         }
         
         function getMerchantInvoiceUrl(merchantName) {

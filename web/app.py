@@ -15,6 +15,7 @@ from pathlib import Path
 from datetime import datetime
 import shutil
 from collections import deque
+import json
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -1156,6 +1157,37 @@ def delete_statement():
     except Exception as e:
         import traceback
         traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/learned-urls', methods=['GET'])
+def get_learned_urls():
+    """Get learned merchant URLs from file"""
+    try:
+        urls_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'learned_urls.json')
+        if os.path.exists(urls_file):
+            with open(urls_file, 'r') as f:
+                return jsonify(json.load(f))
+        return jsonify({})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/learned-urls', methods=['POST'])
+def save_learned_urls():
+    """Save learned merchant URLs to file"""
+    try:
+        data = request.get_json()
+        urls_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'learned_urls.json')
+        
+        # Ensure data directory exists
+        os.makedirs(os.path.dirname(urls_file), exist_ok=True)
+        
+        with open(urls_file, 'w') as f:
+            json.dump(data, f, indent=2)
+        
+        return jsonify({'success': True, 'message': f'Saved {len(data)} learned URLs'})
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
