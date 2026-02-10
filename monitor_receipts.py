@@ -264,12 +264,30 @@ def main():
     console.print(f"[cyan]Output:[/cyan] {OUTPUT_CSV}")
     console.print()
     
-    # Create event handler and observer
+    # Create event handler
     event_handler = ReceiptMonitor()
+    
+    # Process existing files first
+    console.print("[yellow]Checking for existing unprocessed receipts...[/yellow]")
+    receipts_folder = Path(RECEIPTS_FOLDER)
+    existing_files = list(receipts_folder.glob("**/*.pdf"))
+    
+    unprocessed_count = 0
+    for pdf_file in existing_files:
+        if str(pdf_file) not in event_handler.processed_files:
+            console.print(f"[cyan]Processing existing file:[/cyan] {pdf_file.name}")
+            event_handler.process_new_receipt(pdf_file)
+            event_handler.processed_files.add(str(pdf_file))
+            unprocessed_count += 1
+    
+    if unprocessed_count > 0:
+        console.print(f"[green]✓[/green] Processed {unprocessed_count} existing receipts\n")
+    else:
+        console.print(f"[green]✓[/green] No unprocessed receipts found\n")
+    
+    # Start monitoring for new files
     observer = Observer()
     observer.schedule(event_handler, RECEIPTS_FOLDER, recursive=True)
-    
-    # Start monitoring
     observer.start()
     console.print("[bold green]✓ Monitoring started![/bold green]")
     console.print("[yellow]Watching for new receipts... (Press Ctrl+C to stop)[/yellow]\n")
