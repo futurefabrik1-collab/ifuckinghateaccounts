@@ -43,7 +43,6 @@
             margin-bottom: 30px;
             border: 1px solid rgba(255, 255, 255, 0.3);
             position: relative;
-            overflow: hidden;
         }
 
         header::before {
@@ -51,20 +50,20 @@
             position: absolute;
             top: 2.5%;
             left: 20px;
-            width: auto;
+            width: 200px;
             height: 95%;
             background-image: url('/static/logo.png');
             background-size: contain;
             background-repeat: no-repeat;
             background-position: left center;
-            opacity: 0.15;
+            opacity: 1.0;
             pointer-events: none;
-            z-index: 0;
         }
 
-        header > * {
+        header .header-top,
+        header .subtitle,
+        header .header-statement-tabs {
             position: relative;
-            z-index: 1;
         }
 
         .header-top {
@@ -77,7 +76,9 @@
         .header-title {
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 15px;
+            flex: 1;
         }
 
 
@@ -129,16 +130,58 @@
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #receipts-dropzone {
+            background-image: url('/static/fuckoff.png');
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        #statement-dropzone {
+            background-image: url('/static/ray.png');
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        #receipts-dropzone::before,
+        #statement-dropzone::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.3);
+            z-index: 0;
+        }
+
+        #receipts-dropzone > *,
+        #statement-dropzone > * {
+            position: relative;
+            z-index: 1;
         }
 
         .dropzone:hover {
             border-color: #007aff;
-            background: #f5f5f7;
+        }
+
+        #receipts-dropzone:hover::before,
+        #statement-dropzone:hover::before {
+            background: rgba(255, 255, 255, 0.4);
         }
 
         .dropzone.dragging {
             border-color: #007aff;
-            background: #e8f4fd;
+        }
+
+        #receipts-dropzone.dragging::before,
+        #statement-dropzone.dragging::before {
+            background: rgba(232, 244, 253, 0.5);
         }
 
         .dropzone-icon {
@@ -150,6 +193,13 @@
             font-size: 18px;
             font-weight: 600;
             margin-bottom: 8px;
+        }
+
+        #receipts-dropzone .dropzone-title,
+        #statement-dropzone .dropzone-title {
+            font-size: 48px;
+            font-weight: 900;
+            letter-spacing: 2px;
         }
 
         .dropzone-subtitle {
@@ -866,7 +916,7 @@
                     <button class="refresh-btn" onclick="undoLastAction()" id="header-undo-btn" disabled>↶ Undo</button>
                 </div>
             </div>
-            <p class="subtitle">Because accounting shouldn't be this painful</p>
+            <p class="subtitle">Because accounting fucking sucks!</p>
             <div class="header-statement-tabs" id="header-statement-tabs">
                 <div class="loading" style="font-size: 13px; color: #86868b;">Loading statements...</div>
             </div>
@@ -874,15 +924,13 @@
 
         <div class="upload-section">
             <div class="dropzone" id="statement-dropzone" onclick="document.getElementById('statement-input').click()">
-                <div class="dropzone-icon">📄</div>
-                <div class="dropzone-title">Upload Statement</div>
+                <div class="dropzone-title">DROP STATEMENT</div>
                 <div class="dropzone-subtitle">Drop CSV/Excel file or click to browse</div>
                 <input type="file" id="statement-input" accept=".csv,.xlsx,.xls" onchange="uploadStatement(this)">
             </div>
 
             <div class="dropzone" id="receipts-dropzone" onclick="document.getElementById('receipts-input').click()">
-                <div class="dropzone-icon">📎</div>
-                <div class="dropzone-title">Upload Receipts</div>
+                <div class="dropzone-title">DROP RECEIPTS</div>
                 <div class="dropzone-subtitle">Drop PDF files or click to browse</div>
                 <input type="file" id="receipts-input" accept=".pdf" multiple onchange="uploadReceipts(this)">
             </div>
