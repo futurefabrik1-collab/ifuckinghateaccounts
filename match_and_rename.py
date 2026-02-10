@@ -248,13 +248,14 @@ Path(OUTPUT_CSV).parent.mkdir(parents=True, exist_ok=True)
 df.to_csv(OUTPUT_CSV, sep=';', index=False, encoding='utf-8-sig')
 console.print(f"[green]✓[/green] Saved to {OUTPUT_CSV}\n")
 
-# Rename and copy receipt files
+# Rename and move receipt files
 if matches:
-    console.print("[yellow]Renaming and copying receipt files...[/yellow]")
+    console.print("[yellow]Renaming and moving receipt files...[/yellow]")
     renamed_folder = Path(RENAMED_RECEIPTS_FOLDER)
     renamed_folder.mkdir(parents=True, exist_ok=True)
     
     renamed_count = 0
+    removed_count = 0
     for match in track(matches, description="Renaming files..."):
         row_num = match['row']
         merchant = match['merchant']
@@ -268,10 +269,18 @@ if matches:
         try:
             shutil.copy2(original_path, new_path)
             renamed_count += 1
+            
+            # Remove original file from source folder
+            try:
+                original_path.unlink()
+                removed_count += 1
+            except Exception as e:
+                console.print(f"[yellow]Warning: Could not remove {original_path.name}: {e}[/yellow]")
         except Exception as e:
             console.print(f"[red]Error copying {original_path.name}: {e}[/red]")
     
-    console.print(f"[green]✓[/green] Renamed {renamed_count} receipt files to {RENAMED_RECEIPTS_FOLDER}\n")
+    console.print(f"[green]✓[/green] Renamed {renamed_count} receipt files to {RENAMED_RECEIPTS_FOLDER}")
+    console.print(f"[green]✓[/green] Removed {removed_count} matched receipts from source folder\n")
 
 console.print("[bold green]Done![/bold green]\n")
 console.print(f"[cyan]Updated CSV:[/cyan] {OUTPUT_CSV}")
