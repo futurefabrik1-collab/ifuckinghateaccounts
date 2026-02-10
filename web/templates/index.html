@@ -598,6 +598,28 @@
             box-shadow: 0 4px 8px rgba(255, 149, 0, 0.3);
         }
 
+        .edit-url-btn {
+            display: inline-block;
+            margin-left: 4px;
+            padding: 4px 8px;
+            background: rgba(0, 122, 255, 0.1);
+            color: #007aff;
+            border: 1px solid rgba(0, 122, 255, 0.3);
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            vertical-align: middle;
+        }
+
+        .edit-url-btn:hover {
+            background: rgba(0, 122, 255, 0.2);
+            border-color: #007aff;
+            transform: translateY(-1px);
+        }
+
         .refresh-btn {
             background: #007aff;
             color: white;
@@ -954,9 +976,9 @@
     <!-- Learn Invoice URL Modal -->
     <div class="description-modal" id="learn-url-modal" style="display: none;">
         <div class="modal-content">
-            <div class="modal-header">Learn Invoice URL</div>
+            <div class="modal-header" id="learn-url-modal-header">Learn Invoice URL</div>
             <div class="modal-body" style="margin-bottom: 20px;">
-                <p style="margin-bottom: 15px;">Add an invoice/billing URL for <strong id="learn-merchant-name"></strong></p>
+                <p style="margin-bottom: 15px;"><span id="learn-url-action">Add an</span> invoice/billing URL for <strong id="learn-merchant-name"></strong></p>
                 <label style="display: block; margin-bottom: 5px; font-weight: 500;">Invoice URL:</label>
                 <input type="url" id="learn-url-input" placeholder="https://example.com/billing" 
                        style="width: 100%; padding: 10px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 14px; margin-bottom: 10px;">
@@ -1047,15 +1069,26 @@
             return null;
         }
         
-        function showLearnUrlModal(merchantName) {
+        function showLearnUrlModal(merchantName, currentUrl = '') {
             const modal = document.getElementById('learn-url-modal');
+            const modalHeader = document.getElementById('learn-url-modal-header');
+            const actionText = document.getElementById('learn-url-action');
             const merchantNameEl = document.getElementById('learn-merchant-name');
             const urlInput = document.getElementById('learn-url-input');
             const saveBtn = document.getElementById('learn-url-save-btn');
             const cancelBtn = document.getElementById('learn-url-cancel-btn');
             
+            // Update modal text based on whether we're editing or adding
+            if (currentUrl) {
+                modalHeader.textContent = 'Edit Invoice URL';
+                actionText.textContent = 'Update the';
+            } else {
+                modalHeader.textContent = 'Learn Invoice URL';
+                actionText.textContent = 'Add an';
+            }
+            
             merchantNameEl.textContent = merchantName;
-            urlInput.value = '';
+            urlInput.value = currentUrl;
             
             saveBtn.onclick = () => {
                 const url = urlInput.value.trim();
@@ -1076,7 +1109,7 @@
                 learnedMerchantUrls[merchantName] = url;
                 saveLearnedUrls();
                 
-                showToast(`Learned URL for ${merchantName}! 🎓`, 'success');
+                showToast(`${currentUrl ? 'Updated' : 'Learned'} URL for ${merchantName}! 🎓`, 'success');
                 modal.style.display = 'none';
                 
                 // Reload transactions to show the new button
@@ -1574,7 +1607,17 @@
                     // Show invoice button if URL exists, otherwise show "Learn URL" button
                     let invoiceButton = '';
                     if (invoiceUrl) {
-                        invoiceButton = `<a href="${invoiceUrl}" target="_blank" class="invoice-btn" onclick="event.stopPropagation();">📄 Invoice</a>`;
+                        const escapedMerchant = merchantShort
+                            .replace(/\\/g, '\\\\')
+                            .replace(/'/g, "\\'")
+                            .replace(/"/g, '\\"')
+                            .replace(/</g, '&lt;')
+                            .replace(/>/g, '&gt;');
+                        const escapedUrl = invoiceUrl
+                            .replace(/\\/g, '\\\\')
+                            .replace(/'/g, "\\'")
+                            .replace(/"/g, '\\"');
+                        invoiceButton = `<a href="${invoiceUrl}" target="_blank" class="invoice-btn" onclick="event.stopPropagation();">📄 Invoice</a><button class="edit-url-btn" onclick="event.stopPropagation(); showLearnUrlModal('${escapedMerchant}', '${escapedUrl}');">✏️</button>`;
                     } else if (merchantShort && merchantShort !== 'Unknown' && merchantShort.length > 3) {
                         const escapedMerchant = merchantShort
                             .replace(/\\/g, '\\\\')
