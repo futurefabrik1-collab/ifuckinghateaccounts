@@ -1160,6 +1160,42 @@ def delete_statement():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/open-folder', methods=['POST'])
+def open_folder():
+    """Open a folder in the system file manager"""
+    try:
+        data = request.get_json()
+        folder_path = data.get('path')
+        
+        if not folder_path:
+            return jsonify({'error': 'No path provided'}), 400
+        
+        # Make path absolute
+        if not os.path.isabs(folder_path):
+            folder_path = os.path.join(os.path.dirname(__file__), '..', folder_path)
+        
+        folder_path = os.path.abspath(folder_path)
+        
+        if not os.path.exists(folder_path):
+            return jsonify({'error': f'Folder does not exist: {folder_path}'}), 404
+        
+        # Open folder based on OS
+        import platform
+        import subprocess
+        
+        system = platform.system()
+        if system == 'Darwin':  # macOS
+            subprocess.Popen(['open', folder_path])
+        elif system == 'Windows':
+            subprocess.Popen(['explorer', folder_path])
+        else:  # Linux
+            subprocess.Popen(['xdg-open', folder_path])
+        
+        return jsonify({'success': True, 'message': f'Opened folder: {os.path.basename(folder_path)}'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/learned-urls', methods=['GET'])
 def get_learned_urls():
     """Get learned merchant URLs from file"""

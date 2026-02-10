@@ -1589,17 +1589,47 @@
             
             if (statement && statement.receipts_folder && statement.matched_folder) {
                 folderLinksDiv.style.display = 'block';
-                receiptsLink.href = `file://${window.location.origin.replace('http://', '').replace(':5001', '')}/${statement.receipts_folder}`;
-                matchedLink.href = `file://${window.location.origin.replace('http://', '').replace(':5001', '')}/${statement.matched_folder}`;
+                receiptsLink.href = '#';
+                matchedLink.href = '#';
                 
                 // Add onclick to open in Finder (Mac) or Explorer (Windows)
-                receiptsLink.onclick = (e) => {
+                receiptsLink.onclick = async (e) => {
                     e.preventDefault();
-                    showToast(`Receipts folder: ${statement.receipts_folder}`, 'success');
+                    try {
+                        const response = await fetch('/api/open-folder', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ path: statement.receipts_folder })
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                            showToast(result.message, 'success');
+                        } else {
+                            showToast(result.error || 'Failed to open folder', 'error');
+                        }
+                    } catch (err) {
+                        showToast('Error opening folder', 'error');
+                        console.error(err);
+                    }
                 };
-                matchedLink.onclick = (e) => {
+                matchedLink.onclick = async (e) => {
                     e.preventDefault();
-                    showToast(`Matched folder: ${statement.matched_folder}`, 'success');
+                    try {
+                        const response = await fetch('/api/open-folder', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ path: statement.matched_folder })
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                            showToast(result.message, 'success');
+                        } else {
+                            showToast(result.error || 'Failed to open folder', 'error');
+                        }
+                    } catch (err) {
+                        showToast('Error opening folder', 'error');
+                        console.error(err);
+                    }
                 };
             } else {
                 folderLinksDiv.style.display = 'none';
