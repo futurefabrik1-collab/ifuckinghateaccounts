@@ -47,7 +47,7 @@
         .header-top {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
             margin-bottom: 15px;
         }
 
@@ -624,17 +624,22 @@
             background: #007aff;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 10px 16px;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
-            margin-left: auto;
             transition: background 0.2s;
+            white-space: nowrap;
         }
 
         .refresh-btn:hover {
             background: #0051d5;
+        }
+        
+        .refresh-btn:disabled {
+            background: #d1d1d6;
+            cursor: not-allowed;
         }
 
         .update-btn {
@@ -747,10 +752,11 @@
         }
 
         .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
             margin-top: 20px;
+            max-width: 280px;
         }
 
         .file-list {
