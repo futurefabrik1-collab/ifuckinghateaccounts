@@ -158,14 +158,51 @@ class ReceiptProcessor:
         Returns:
             Merchant name or None
         """
-        # Usually the merchant name is in the first few lines
         lines = text.split('\n')
-        if lines:
-            # Return first non-empty line as merchant name
-            for line in lines[:5]:
-                line = line.strip()
-                if line and len(line) > 2:
-                    return line
+        if not lines:
+            return None
+        
+        # Skip common header words that aren't merchant names
+        skip_words = ['receipt', 'invoice', 'bill', 'statement', 'order', 'confirmation']
+        
+        # Look for merchant name in first 10 lines
+        for i, line in enumerate(lines[:10]):
+            line = line.strip()
+            
+            # Skip empty lines
+            if not line or len(line) < 3:
+                continue
+            
+            # Skip if line is just a header word
+            if line.lower() in skip_words:
+                continue
+            
+            # Skip lines with only numbers or invoice numbers
+            if re.match(r'^[\d\s\-\.:]+$', line):
+                continue
+            
+            # Skip if line starts with common invoice/date prefixes
+            if re.match(r'^(invoice|date|number|bill|paid|order|ref)', line.lower()):
+                continue
+            
+            # Look for company identifiers (Inc, LLC, GmbH, Ltd, etc.)
+            if re.search(r'\b(inc|llc|gmbh|ltd|limited|corp|corporation|co\.)\b', line, re.IGNORECASE):
+                # Extract just the company name
+                company = re.sub(r'\s+(bill to|invoice|receipt).*', '', line, flags=re.IGNORECASE)
+                return company.strip()
+            
+            # If we find "Bill to" on the line, extract what comes before it
+            if 'bill to' in line.lower():
+                # Split on "bill to" (with varying spaces)
+                parts = re.split(r'\s*bill\s+to\s*', line, flags=re.IGNORECASE)
+                if parts[0].strip() and len(parts[0].strip()) > 2:
+                    return parts[0].strip()
+                # Skip this line and continue to next
+                continue
+            
+            # Return first substantial line (likely merchant name)
+            if len(line) > 5 and not line.startswith(('Invoice', 'Date', 'Number')):
+                return line
         
         return None
     
