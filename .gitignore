@@ -2,8 +2,10 @@
 __pycache__/
 *.pyc
 *.pyo
+*.py[cod]
 venv/
 *.egg-info/
+.pytest_cache/
 
 # Data
 statements/*/
@@ -15,6 +17,7 @@ data/learned_urls.json
 # Logs
 *.log
 web.log
+logs/
 
 # OS
 .DS_Store
@@ -23,3 +26,17 @@ Thumbs.db
 # Temporary
 tmp_rovodev_*
 *_backup_*.csv
+
+# Environment and secrets
+.env
+
+# Cache
+.cache/
+
+# Test coverage
+htmlcov/
+.coverage
+
+# IDE
+.vscode/
+.idea/

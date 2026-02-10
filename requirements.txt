@@ -1,34 +1,47 @@
 # PDF Processing
-PyPDF2
-pdfplumber
+PyPDF2>=3.0.1
+pdfplumber>=0.10.3
 
 # Spreadsheet Processing
-pandas
-openpyxl
-xlrd
+pandas>=2.1.4
+openpyxl>=3.1.2
+xlrd>=2.0.1
 
 # OCR (Optional - for reading receipt text)
-pillow
-pytesseract
-pdf2image
+pillow>=10.1.0
+pytesseract>=0.3.10
+pdf2image>=1.16.3
 
 # String Matching
-fuzzywuzzy
-python-Levenshtein
+fuzzywuzzy>=0.18.0
+python-Levenshtein>=0.23.0
 
 # Date Processing
-python-dateutil
+python-dateutil>=2.8.2
 
 # CLI Interface
-click
-rich
+click>=8.1.7
+rich>=13.7.0
 
 # Testing
-pytest
+pytest>=7.4.3
+pytest-cov>=4.1.0
 
 # File monitoring
-watchdog
+watchdog>=3.0.0
 
 # Web interface
-flask
-flask-cors
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# Configuration
+python-dotenv>=1.0.0
+
+# Security (optional - for MIME type detection)
+python-magic>=0.4.27
+
+# System monitoring
+psutil>=5.9.6
+
+# Rate limiting (optional)
+Flask-Limiter>=3.5.0
