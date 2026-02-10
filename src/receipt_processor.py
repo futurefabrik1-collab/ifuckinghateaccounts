@@ -60,12 +60,14 @@ class ReceiptProcessor:
         Returns:
             Extracted amount or None
         """
-        # Common patterns for total amount
+        # Common patterns for total amount (USD and EUR)
         patterns = [
-            r'total[:\s]+\$?([\d,]+\.?\d{0,2})',
-            r'amount[:\s]+\$?([\d,]+\.?\d{0,2})',
-            r'grand total[:\s]+\$?([\d,]+\.?\d{0,2})',
-            r'\$\s*([\d,]+\.\d{2})\s*$',  # Last dollar amount
+            r'total[:\s]+[\$€]?([\d,]+\.?\d{0,2})',
+            r'amount\s+paid[:\s]+[\$€]?([\d,]+\.?\d{0,2})',
+            r'amount[:\s]+[\$€]?([\d,]+\.?\d{0,2})',
+            r'grand total[:\s]+[\$€]?([\d,]+\.?\d{0,2})',
+            r'[\$€]\s*([\d,]+\.\d{2})\s+paid',
+            r'[\$€]\s*([\d,]+\.\d{2})\s*$',  # Last dollar/euro amount
         ]
         
         for pattern in patterns:
@@ -90,23 +92,59 @@ class ReceiptProcessor:
         Returns:
             Extracted date or None
         """
-        # Common date patterns
+        from dateutil import parser as date_parser
+        
+        # Look for specific date indicators first (more reliable)
+        priority_patterns = [
+            r'date\s+paid[:\s]+([a-z]+\s+\d{1,2},?\s+\d{4})',
+            r'paid\s+on[:\s]+([a-z]+\s+\d{1,2},?\s+\d{4})',
+            r'invoice\s+date[:\s]+([a-z]+\s+\d{1,2},?\s+\d{4})',
+        ]
+        
+        for pattern in priority_patterns:
+            matches = re.findall(pattern, text.lower(), re.IGNORECASE)
+            if matches:
+                date_str = matches[0]
+                try:
+                    parsed_date = date_parser.parse(date_str, fuzzy=False)
+                    if parsed_date.year <= datetime.now().year + 1:
+                        return parsed_date
+                except:
+                    pass
+        
+        # Common date patterns (fallback)
         date_patterns = [
-            r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})',
-            r'(\d{4}[/-]\d{1,2}[/-]\d{1,2})',
+            # Full month name: December 13, 2025
+            r'(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}',
+            # Short month: Dec 13, 2025
             r'(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},?\s+\d{4}',
+            # Numeric: 12/13/2025 or 13.12.2025
+            r'\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}',
+            # ISO: 2025-12-13
+            r'\d{4}[/-]\d{1,2}[/-]\d{1,2}',
         ]
         
         for pattern in date_patterns:
-            matches = re.findall(pattern, text.lower())
+            matches = re.findall(pattern, text.lower(), re.IGNORECASE)
             if matches:
+                # Take first match and ensure it's not a future date range
                 date_str = matches[0]
-                # Try to parse the date
-                for fmt in ['%m/%d/%Y', '%d/%m/%Y', '%Y-%m-%d', '%m-%d-%Y', '%m/%d/%y']:
-                    try:
-                        return datetime.strptime(date_str, fmt)
-                    except ValueError:
-                        continue
+                try:
+                    # Use dateutil parser for flexible date parsing
+                    parsed_date = date_parser.parse(date_str, fuzzy=False)
+                    # Sanity check - don't return dates too far in future
+                    if parsed_date.year <= datetime.now().year + 1:
+                        return parsed_date
+                except:
+                    # Try manual parsing
+                    for fmt in ['%B %d, %Y', '%b %d, %Y', '%m/%d/%Y', '%d/%m/%Y', 
+                               '%Y-%m-%d', '%m-%d-%Y', '%m/%d/%y', '%d.%m.%Y']:
+                        try:
+                            parsed = datetime.strptime(date_str, fmt)
+                            if parsed.year <= datetime.now().year + 1:
+                                return parsed
+                        except ValueError:
+                            continue
         
         return None
     

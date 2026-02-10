@@ -36,11 +36,37 @@ class StatementParser:
         """
         # Detect file type and load
         if self.file_path.suffix.lower() == '.csv':
-            self.df = pd.read_csv(self.file_path)
+            # Try to detect delimiter automatically
+            with open(self.file_path, 'r', encoding='utf-8-sig') as f:
+                first_line = f.readline()
+                # Count delimiters in first line
+                if first_line.count(';') > first_line.count(','):
+                    delimiter = ';'
+                elif first_line.count(',') > first_line.count(';'):
+                    delimiter = ','
+                elif first_line.count('\t') > 0:
+                    delimiter = '\t'
+                else:
+                    delimiter = ','
+            
+            self.df = pd.read_csv(self.file_path, sep=delimiter, encoding='utf-8-sig')
         elif self.file_path.suffix.lower() in ['.xlsx', '.xls']:
             self.df = pd.read_excel(self.file_path)
         else:
             raise ValueError(f"Unsupported file format: {self.file_path.suffix}")
+        
+        # Check if specified columns exist
+        missing_cols = []
+        if date_column not in self.df.columns:
+            missing_cols.append(f"Date column '{date_column}' not found")
+        if amount_column not in self.df.columns:
+            missing_cols.append(f"Amount column '{amount_column}' not found")
+        if description_column not in self.df.columns:
+            missing_cols.append(f"Description column '{description_column}' not found")
+        
+        if missing_cols:
+            available = ', '.join(self.df.columns.tolist())
+            raise ValueError(f"{'; '.join(missing_cols)}. Available columns: {available}")
         
         # Standardize column names
         column_mapping = {
@@ -51,11 +77,14 @@ class StatementParser:
         
         self.df = self.df.rename(columns=column_mapping)
         
-        # Convert date to datetime
-        self.df['date'] = pd.to_datetime(self.df['date'])
+        # Convert date to datetime (handle German format)
+        self.df['date'] = pd.to_datetime(self.df['date'], format='%d.%m.%Y', errors='coerce')
+        if self.df['date'].isna().all():
+            # Try other common formats
+            self.df['date'] = pd.to_datetime(self.df['date'], errors='coerce')
         
-        # Convert amount to float (handle negative signs, currency symbols)
-        self.df['amount'] = self.df['amount'].astype(str).str.replace('$', '').str.replace(',', '')
+        # Convert amount to float (handle negative signs, currency symbols, German format)
+        self.df['amount'] = self.df['amount'].astype(str).str.replace('$', '').str.replace('€', '').str.replace('.', '').str.replace(',', '.')
         self.df['amount'] = pd.to_numeric(self.df['amount'], errors='coerce')
         
         # Add match status column
