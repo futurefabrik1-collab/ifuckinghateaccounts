@@ -26,19 +26,43 @@ CORS(app)
 
 # Configuration
 BASE_DIR = Path(__file__).parent.parent
-STATEMENTS_FOLDER = BASE_DIR / "data/statements"
-RECEIPTS_FOLDER = BASE_DIR / "data/receipts"
-OUTPUT_FOLDER = BASE_DIR / "output"
-RENAMED_RECEIPTS_FOLDER = BASE_DIR / "output/renamed_receipts"
+STATEMENTS_BASE_FOLDER = BASE_DIR / "statements"
 
-# Create folders if they don't exist
-STATEMENTS_FOLDER.mkdir(parents=True, exist_ok=True)
-RECEIPTS_FOLDER.mkdir(parents=True, exist_ok=True)
-OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
+# Create base folder
+STATEMENTS_BASE_FOLDER.mkdir(parents=True, exist_ok=True)
 
 # Allowed file extensions
 ALLOWED_STATEMENT_EXTENSIONS = {'csv', 'xlsx', 'xls'}
 ALLOWED_RECEIPT_EXTENSIONS = {'pdf'}
+
+
+def get_statement_folder(statement_name):
+    """Get the folder path for a specific statement"""
+    # Remove extension for folder name
+    folder_name = statement_name.rsplit('.', 1)[0]
+    return STATEMENTS_BASE_FOLDER / folder_name
+
+
+def get_statement_receipts_folder(statement_name, subfolder='receipts'):
+    """Get receipts subfolder for a statement"""
+    return get_statement_folder(statement_name) / subfolder
+
+
+def create_statement_folders(statement_name):
+    """Create all necessary folders for a statement"""
+    statement_folder = get_statement_folder(statement_name)
+    receipts_folder = statement_folder / 'receipts'
+    matched_folder = statement_folder / 'matched_receipts'
+    
+    statement_folder.mkdir(parents=True, exist_ok=True)
+    receipts_folder.mkdir(parents=True, exist_ok=True)
+    matched_folder.mkdir(parents=True, exist_ok=True)
+    
+    return {
+        'base': statement_folder,
+        'receipts': receipts_folder,
+        'matched': matched_folder
+    }
 
 
 def allowed_file(filename, allowed_extensions):
@@ -47,33 +71,47 @@ def allowed_file(filename, allowed_extensions):
 
 
 def get_all_statements():
-    """Get list of all statement files"""
+    """Get list of all statement folders"""
     statements = []
-    for ext in ALLOWED_STATEMENT_EXTENSIONS:
-        statements.extend(list(STATEMENTS_FOLDER.glob(f"*.{ext}")))
+    
+    # Look for statement CSV files in subfolders
+    for folder in STATEMENTS_BASE_FOLDER.iterdir():
+        if folder.is_dir():
+            # Look for CSV/Excel files in the folder
+            for ext in ALLOWED_STATEMENT_EXTENSIONS:
+                statement_files = list(folder.glob(f"*.{ext}"))
+                for s in statement_files:
+                    statements.append({
+                        'name': s.name,
+                        'folder': folder.name,
+                        'path': str(s.relative_to(BASE_DIR)),
+                        'modified': datetime.fromtimestamp(s.stat().st_mtime).isoformat(),
+                        'receipts_folder': str((folder / 'receipts').relative_to(BASE_DIR)),
+                        'matched_folder': str((folder / 'matched_receipts').relative_to(BASE_DIR))
+                    })
     
     # Sort by name
-    statements.sort(key=lambda x: x.name)
+    statements.sort(key=lambda x: x['name'])
     
-    return [{
-        'name': s.name,
-        'path': str(s.relative_to(BASE_DIR)),
-        'modified': datetime.fromtimestamp(s.stat().st_mtime).isoformat()
-    } for s in statements]
+    return statements
 
 
 def load_statement_data(statement_name=None):
     """Load statement data with match status"""
-    if statement_name:
-        statement_file = STATEMENTS_FOLDER / statement_name
-        output_csv = OUTPUT_FOLDER / f"{statement_name.rsplit('.', 1)[0]}_matches.csv"
-    else:
-        # Try to find a default statement
-        statements = list(STATEMENTS_FOLDER.glob("*.csv"))
-        if not statements:
+    if not statement_name:
+        # Try to find first available statement
+        all_statements = get_all_statements()
+        if not all_statements:
             return pd.DataFrame()
-        statement_file = statements[0]
-        output_csv = OUTPUT_FOLDER / f"{statement_file.stem}_matches.csv"
+        statement_name = all_statements[0]['name']
+    
+    # Find the statement file in its folder
+    statement_folder = get_statement_folder(statement_name)
+    statement_file = statement_folder / statement_name
+    output_csv = statement_folder / f"{statement_name.rsplit('.', 1)[0]}_matches.csv"
+    
+    if not statement_file.exists():
+        return pd.DataFrame()
     
     # Load from output if exists, otherwise from original
     if output_csv.exists():
@@ -109,9 +147,16 @@ def get_summary_stats(df):
     }
 
 
-def scan_receipts():
-    """Scan receipts folder and return count"""
-    receipts = list(RECEIPTS_FOLDER.glob("**/*.pdf"))
+def scan_receipts(statement_name=None):
+    """Scan receipts folder for a specific statement"""
+    if not statement_name:
+        return 0
+    
+    receipts_folder = get_statement_receipts_folder(statement_name, 'receipts')
+    if not receipts_folder.exists():
+        return 0
+    
+    receipts = list(receipts_folder.glob("*.pdf"))
     return len(receipts)
 
 
@@ -139,10 +184,14 @@ def api_summary():
         df = load_statement_data(statement_name)
         stats = get_summary_stats(df)
         
-        # Add receipt counts
-        stats['receipts_in_folder'] = scan_receipts()
-        renamed_count = len(list(RENAMED_RECEIPTS_FOLDER.glob("*.pdf"))) if RENAMED_RECEIPTS_FOLDER.exists() else 0
-        stats['receipts_renamed'] = renamed_count
+        # Add receipt counts for this statement
+        if statement_name:
+            stats['receipts_in_folder'] = scan_receipts(statement_name)
+            matched_folder = get_statement_receipts_folder(statement_name, 'matched_receipts')
+            stats['receipts_renamed'] = len(list(matched_folder.glob("*.pdf"))) if matched_folder.exists() else 0
+        else:
+            stats['receipts_in_folder'] = 0
+            stats['receipts_renamed'] = 0
         
         return jsonify(stats)
     except Exception as e:
@@ -185,9 +234,17 @@ def api_transactions():
 
 @app.route('/api/receipts')
 def api_receipts():
-    """Get list of receipts in folder"""
+    """Get list of receipts for a specific statement"""
     try:
-        receipts = list(RECEIPTS_FOLDER.glob("**/*.pdf"))
+        statement_name = request.args.get('statement')
+        if not statement_name:
+            return jsonify([])
+        
+        receipts_folder = get_statement_receipts_folder(statement_name, 'receipts')
+        if not receipts_folder.exists():
+            return jsonify([])
+        
+        receipts = list(receipts_folder.glob("*.pdf"))
         receipt_list = []
         
         for receipt in receipts:
@@ -209,12 +266,17 @@ def api_receipts():
 
 @app.route('/api/renamed-receipts')
 def api_renamed_receipts():
-    """Get list of renamed receipts"""
+    """Get list of matched/renamed receipts for a specific statement"""
     try:
-        if not RENAMED_RECEIPTS_FOLDER.exists():
+        statement_name = request.args.get('statement')
+        if not statement_name:
             return jsonify([])
         
-        receipts = list(RENAMED_RECEIPTS_FOLDER.glob("*.pdf"))
+        matched_folder = get_statement_receipts_folder(statement_name, 'matched_receipts')
+        if not matched_folder.exists():
+            return jsonify([])
+        
+        receipts = list(matched_folder.glob("*.pdf"))
         receipt_list = []
         
         for receipt in receipts:
@@ -249,13 +311,22 @@ def upload_statement():
             return jsonify({'error': 'Invalid file type. Only CSV, XLS, XLSX allowed'}), 400
         
         filename = secure_filename(file.filename)
-        filepath = STATEMENTS_FOLDER / filename
+        
+        # Create folders for this statement
+        folders = create_statement_folders(filename)
+        
+        # Save statement file to its folder
+        filepath = folders['base'] / filename
         file.save(filepath)
         
         return jsonify({
             'success': True,
             'filename': filename,
-            'message': f'Statement uploaded: {filename}'
+            'message': f'Statement uploaded: {filename}',
+            'folders': {
+                'receipts': str(folders['receipts'].relative_to(BASE_DIR)),
+                'matched': str(folders['matched'].relative_to(BASE_DIR))
+            }
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -263,13 +334,22 @@ def upload_statement():
 
 @app.route('/api/upload/receipt', methods=['POST'])
 def upload_receipt():
-    """Upload receipt PDFs"""
+    """Upload receipt PDFs to a specific statement's folder"""
     try:
         if 'files' not in request.files:
             return jsonify({'error': 'No files provided'}), 400
         
+        # Get which statement these receipts are for
+        statement_name = request.form.get('statement')
+        if not statement_name:
+            return jsonify({'error': 'No statement specified'}), 400
+        
         files = request.files.getlist('files')
         uploaded = []
+        
+        # Get receipts folder for this statement
+        receipts_folder = get_statement_receipts_folder(statement_name, 'receipts')
+        receipts_folder.mkdir(parents=True, exist_ok=True)
         
         for file in files:
             if file.filename == '':
@@ -279,7 +359,7 @@ def upload_receipt():
                 continue
             
             filename = secure_filename(file.filename)
-            filepath = RECEIPTS_FOLDER / filename
+            filepath = receipts_folder / filename
             file.save(filepath)
             uploaded.append(filename)
         
@@ -287,7 +367,7 @@ def upload_receipt():
             'success': True,
             'count': len(uploaded),
             'files': uploaded,
-            'message': f'Uploaded {len(uploaded)} receipt(s)'
+            'message': f'Uploaded {len(uploaded)} receipt(s) to {statement_name}'
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -306,8 +386,9 @@ def toggle_no_receipt():
             return jsonify({'error': 'Missing statement or row'}), 400
         
         # Load the data
-        statement_file = STATEMENTS_FOLDER / statement_name
-        output_csv = OUTPUT_FOLDER / f"{statement_name.rsplit('.', 1)[0]}_matches.csv"
+        statement_folder = get_statement_folder(statement_name)
+        statement_file = statement_folder / statement_name
+        output_csv = statement_folder / f"{statement_name.rsplit('.', 1)[0]}_matches.csv"
         
         # Load from output if exists, otherwise from original
         if output_csv.exists():
