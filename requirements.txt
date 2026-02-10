@@ -1,0 +1,27 @@
+# PDF Processing
+PyPDF2==3.0.1
+pdfplumber==0.10.3
+pytesseract==0.3.10
+pdf2image==1.16.3
+
+# Spreadsheet Processing
+pandas==2.1.4
+openpyxl==3.1.2
+xlrd==2.0.1
+
+# OCR (Optional - for reading receipt text)
+pillow==10.1.0
+
+# String Matching
+fuzzywuzzy==0.18.0
+python-Levenshtein==0.23.0
+
+# Date Processing
+python-dateutil==2.8.2
+
+# CLI Interface
+click==8.1.7
+rich==13.7.0
+
+# Testing
+pytest==7.4.3
