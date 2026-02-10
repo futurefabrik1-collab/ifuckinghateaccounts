@@ -84,6 +84,8 @@ def load_statement_data(statement_name=None):
             df['Matching Receipt Found'] = False
             df['Matched Receipt File'] = ''
             df['Match Confidence'] = 0
+        if 'No Receipt Needed' not in df.columns:
+            df['No Receipt Needed'] = False
     
     return df
 
@@ -92,14 +94,18 @@ def get_summary_stats(df):
     """Calculate summary statistics"""
     total = int(len(df))
     matched = int(df['Matching Receipt Found'].sum()) if 'Matching Receipt Found' in df.columns else 0
-    unmatched = int(total - matched)
-    match_rate = float((matched / total * 100) if total > 0 else 0)
+    no_receipt_needed = int(df['No Receipt Needed'].sum()) if 'No Receipt Needed' in df.columns else 0
+    completed = matched + no_receipt_needed
+    missing = total - completed
+    completion_rate = float((completed / total * 100) if total > 0 else 0)
     
     return {
         'total': total,
         'matched': matched,
-        'unmatched': unmatched,
-        'match_rate': round(match_rate, 1)
+        'no_receipt_needed': no_receipt_needed,
+        'completed': completed,
+        'missing': missing,
+        'completion_rate': round(completion_rate, 1)
     }
 
 
@@ -167,6 +173,7 @@ def api_transactions():
                 'amount': str(row['Betrag']),
                 'description': str(row['Verwendungszweck'])[:100],
                 'matched': bool(row['Matching Receipt Found']) if 'Matching Receipt Found' in row else False,
+                'no_receipt_needed': bool(row['No Receipt Needed']) if 'No Receipt Needed' in row else False,
                 'receipt': str(row['Matched Receipt File']) if pd.notna(row.get('Matched Receipt File', '')) else '',
                 'confidence': int(row['Match Confidence']) if pd.notna(row.get('Match Confidence', 0)) else 0
             })
@@ -281,6 +288,61 @@ def upload_receipt():
             'count': len(uploaded),
             'files': uploaded,
             'message': f'Uploaded {len(uploaded)} receipt(s)'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/toggle-no-receipt', methods=['POST'])
+def toggle_no_receipt():
+    """Toggle 'No Receipt Needed' status for a transaction"""
+    try:
+        data = request.json
+        statement_name = data.get('statement')
+        row_index = data.get('row')  # CSV row number (1-indexed with header)
+        checked = data.get('checked', False)
+        
+        if not statement_name or row_index is None:
+            return jsonify({'error': 'Missing statement or row'}), 400
+        
+        # Load the data
+        statement_file = STATEMENTS_FOLDER / statement_name
+        output_csv = OUTPUT_FOLDER / f"{statement_name.rsplit('.', 1)[0]}_matches.csv"
+        
+        # Load from output if exists, otherwise from original
+        if output_csv.exists():
+            df = pd.read_csv(output_csv, sep=';', encoding='utf-8-sig')
+        else:
+            df = pd.read_csv(statement_file, sep=';', encoding='utf-8-sig')
+            # Add columns if they don't exist
+            if 'Matching Receipt Found' not in df.columns:
+                df['Matching Receipt Found'] = False
+                df['Matched Receipt File'] = ''
+                df['Match Confidence'] = 0
+            if 'No Receipt Needed' not in df.columns:
+                df['No Receipt Needed'] = False
+        
+        # Ensure column exists
+        if 'No Receipt Needed' not in df.columns:
+            df['No Receipt Needed'] = False
+        
+        # Convert row number to dataframe index (row - 2 because of header and 0-index)
+        df_index = row_index - 2
+        
+        if df_index < 0 or df_index >= len(df):
+            return jsonify({'error': 'Invalid row index'}), 400
+        
+        # Update the value
+        df.loc[df_index, 'No Receipt Needed'] = checked
+        
+        # Save to output CSV
+        output_csv.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(output_csv, sep=';', index=False, encoding='utf-8-sig')
+        
+        return jsonify({
+            'success': True,
+            'row': row_index,
+            'checked': checked
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500

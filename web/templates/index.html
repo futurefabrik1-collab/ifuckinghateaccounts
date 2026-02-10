@@ -148,9 +148,10 @@
         }
 
         .stat-value.matched { color: #34c759; }
-        .stat-value.unmatched { color: #ff3b30; }
+        .stat-value.no-receipt { color: #ff9500; }
+        .stat-value.missing { color: #ff3b30; }
         .stat-value.total { color: #007aff; }
-        .stat-value.rate { color: #af52de; }
+        .stat-value.completion { color: #af52de; }
 
         .stat-label {
             color: #86868b;
@@ -240,6 +241,26 @@
         .badge.unmatched {
             background: #ffebee;
             color: #ff3b30;
+        }
+
+        .badge.no-receipt {
+            background: #fff4e6;
+            color: #ff9500;
+        }
+
+        .checkbox-cell {
+            text-align: center;
+        }
+
+        .checkbox-cell input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #ff9500;
+        }
+
+        tr.no-receipt-row {
+            opacity: 0.6;
         }
 
         .receipt-name {
@@ -494,12 +515,16 @@
                 <div class="stat-label">Matched</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value unmatched" id="stat-unmatched">-</div>
-                <div class="stat-label">Unmatched</div>
+                <div class="stat-value no-receipt" id="stat-no-receipt">-</div>
+                <div class="stat-label">No Receipt Needed</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value rate" id="stat-rate">-</div>
-                <div class="stat-label">Match Rate</div>
+                <div class="stat-value missing" id="stat-missing">-</div>
+                <div class="stat-label">Missing Receipts</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value completion" id="stat-completion">-</div>
+                <div class="stat-label">Completion %</div>
             </div>
         </div>
 
@@ -525,6 +550,7 @@
                             <th>Amount</th>
                             <th>Description</th>
                             <th>Status</th>
+                            <th>No Receipt</th>
                             <th>Receipt</th>
                         </tr>
                     </thead>
@@ -759,8 +785,9 @@
                 
                 document.getElementById('stat-total').textContent = data.total || 0;
                 document.getElementById('stat-matched').textContent = data.matched || 0;
-                document.getElementById('stat-unmatched').textContent = data.unmatched || 0;
-                document.getElementById('stat-rate').textContent = (data.match_rate || 0) + '%';
+                document.getElementById('stat-no-receipt').textContent = data.no_receipt_needed || 0;
+                document.getElementById('stat-missing').textContent = data.missing || 0;
+                document.getElementById('stat-completion').textContent = (data.completion_rate || 0) + '%';
             } catch (error) {
                 console.error('Error loading summary:', error);
             }
@@ -789,10 +816,22 @@
                 transactions.forEach(tx => {
                     const row = document.createElement('tr');
                     
+                    // Add class if no receipt needed
+                    if (tx.no_receipt_needed) {
+                        row.classList.add('no-receipt-row');
+                    }
+                    
                     const amountClass = tx.amount.startsWith('-') ? 'negative' : 'positive';
-                    const statusBadge = tx.matched 
-                        ? '<span class="badge matched">✓ Matched</span>'
-                        : '<span class="badge unmatched">✗ No Receipt</span>';
+                    
+                    // Determine status badge
+                    let statusBadge;
+                    if (tx.matched) {
+                        statusBadge = '<span class="badge matched">✓ Matched</span>';
+                    } else if (tx.no_receipt_needed) {
+                        statusBadge = '<span class="badge no-receipt">○ No Receipt</span>';
+                    } else {
+                        statusBadge = '<span class="badge unmatched">✗ Missing</span>';
+                    }
                     
                     const merchantShort = extractMerchant(tx.description);
                     
@@ -804,6 +843,12 @@
                             <span class="merchant-short">${merchantShort}</span>
                         </td>
                         <td>${statusBadge}</td>
+                        <td class="checkbox-cell">
+                            <input type="checkbox" 
+                                   ${tx.no_receipt_needed ? 'checked' : ''} 
+                                   onchange="toggleNoReceipt(${tx.row}, this.checked)"
+                                   ${tx.matched ? 'disabled' : ''}>
+                        </td>
                         <td><span class="receipt-name">${tx.receipt || '-'}</span></td>
                     `;
                     
@@ -905,6 +950,35 @@
             } else {
                 document.getElementById('transactions-section').style.display = 'block';
                 loadTransactions(tab);
+            }
+        }
+
+        async function toggleNoReceipt(row, checked) {
+            try {
+                const response = await fetch('/api/toggle-no-receipt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        statement: currentStatement,
+                        row: row,
+                        checked: checked
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(checked ? 'Marked: No receipt needed' : 'Unmarked: Receipt needed', 'success');
+                    // Refresh data
+                    loadAll();
+                } else {
+                    showToast(data.error || 'Failed to update', 'error');
+                }
+            } catch (error) {
+                console.error('Error toggling no receipt:', error);
+                showToast('Failed to update', 'error');
             }
         }
 
