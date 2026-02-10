@@ -26,3 +26,7 @@ pytest
 
 # File monitoring
 watchdog
+
+# Web interface
+flask
+flask-cors
