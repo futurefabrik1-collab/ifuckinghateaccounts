@@ -7,11 +7,13 @@ Flask web application for managing receipt matching
 
 from flask import Flask, render_template, jsonify, request, send_file
 from flask_cors import CORS
+from werkzeug.utils import secure_filename
 import pandas as pd
 import sys
 import os
 from pathlib import Path
 from datetime import datetime
+import shutil
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -24,18 +26,60 @@ CORS(app)
 
 # Configuration
 BASE_DIR = Path(__file__).parent.parent
-STATEMENT_FILE = BASE_DIR / "data/statements/Umsatzanzeige Jan 31 2026.csv"
-OUTPUT_CSV = BASE_DIR / "output/statement_with_matches.csv"
+STATEMENTS_FOLDER = BASE_DIR / "data/statements"
 RECEIPTS_FOLDER = BASE_DIR / "data/receipts"
+OUTPUT_FOLDER = BASE_DIR / "output"
 RENAMED_RECEIPTS_FOLDER = BASE_DIR / "output/renamed_receipts"
 
+# Create folders if they don't exist
+STATEMENTS_FOLDER.mkdir(parents=True, exist_ok=True)
+RECEIPTS_FOLDER.mkdir(parents=True, exist_ok=True)
+OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
 
-def load_statement_data():
+# Allowed file extensions
+ALLOWED_STATEMENT_EXTENSIONS = {'csv', 'xlsx', 'xls'}
+ALLOWED_RECEIPT_EXTENSIONS = {'pdf'}
+
+
+def allowed_file(filename, allowed_extensions):
+    """Check if file extension is allowed"""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
+
+
+def get_all_statements():
+    """Get list of all statement files"""
+    statements = []
+    for ext in ALLOWED_STATEMENT_EXTENSIONS:
+        statements.extend(list(STATEMENTS_FOLDER.glob(f"*.{ext}")))
+    
+    # Sort by name
+    statements.sort(key=lambda x: x.name)
+    
+    return [{
+        'name': s.name,
+        'path': str(s.relative_to(BASE_DIR)),
+        'modified': datetime.fromtimestamp(s.stat().st_mtime).isoformat()
+    } for s in statements]
+
+
+def load_statement_data(statement_name=None):
     """Load statement data with match status"""
-    if OUTPUT_CSV.exists():
-        df = pd.read_csv(OUTPUT_CSV, sep=';', encoding='utf-8-sig')
+    if statement_name:
+        statement_file = STATEMENTS_FOLDER / statement_name
+        output_csv = OUTPUT_FOLDER / f"{statement_name.rsplit('.', 1)[0]}_matches.csv"
     else:
-        df = pd.read_csv(STATEMENT_FILE, sep=';', encoding='utf-8-sig')
+        # Try to find a default statement
+        statements = list(STATEMENTS_FOLDER.glob("*.csv"))
+        if not statements:
+            return pd.DataFrame()
+        statement_file = statements[0]
+        output_csv = OUTPUT_FOLDER / f"{statement_file.stem}_matches.csv"
+    
+    # Load from output if exists, otherwise from original
+    if output_csv.exists():
+        df = pd.read_csv(output_csv, sep=';', encoding='utf-8-sig')
+    else:
+        df = pd.read_csv(statement_file, sep=';', encoding='utf-8-sig')
         if 'Matching Receipt Found' not in df.columns:
             df['Matching Receipt Found'] = False
             df['Matched Receipt File'] = ''
@@ -71,11 +115,22 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/api/statements')
+def api_statements():
+    """Get list of available statements"""
+    try:
+        statements = get_all_statements()
+        return jsonify(statements)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/summary')
 def api_summary():
     """Get summary statistics"""
     try:
-        df = load_statement_data()
+        statement_name = request.args.get('statement')
+        df = load_statement_data(statement_name)
         stats = get_summary_stats(df)
         
         # Add receipt counts
@@ -92,7 +147,8 @@ def api_summary():
 def api_transactions():
     """Get all transactions"""
     try:
-        df = load_statement_data()
+        statement_name = request.args.get('statement')
+        df = load_statement_data(statement_name)
         
         # Get filter from query params
         filter_type = request.args.get('filter', 'all')
@@ -167,6 +223,65 @@ def api_renamed_receipts():
         receipt_list.sort(key=lambda x: x['name'])
         
         return jsonify(receipt_list)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/upload/statement', methods=['POST'])
+def upload_statement():
+    """Upload a bank statement"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        if not allowed_file(file.filename, ALLOWED_STATEMENT_EXTENSIONS):
+            return jsonify({'error': 'Invalid file type. Only CSV, XLS, XLSX allowed'}), 400
+        
+        filename = secure_filename(file.filename)
+        filepath = STATEMENTS_FOLDER / filename
+        file.save(filepath)
+        
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'message': f'Statement uploaded: {filename}'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/upload/receipt', methods=['POST'])
+def upload_receipt():
+    """Upload receipt PDFs"""
+    try:
+        if 'files' not in request.files:
+            return jsonify({'error': 'No files provided'}), 400
+        
+        files = request.files.getlist('files')
+        uploaded = []
+        
+        for file in files:
+            if file.filename == '':
+                continue
+            
+            if not allowed_file(file.filename, ALLOWED_RECEIPT_EXTENSIONS):
+                continue
+            
+            filename = secure_filename(file.filename)
+            filepath = RECEIPTS_FOLDER / filename
+            file.save(filepath)
+            uploaded.append(filename)
+        
+        return jsonify({
+            'success': True,
+            'count': len(uploaded),
+            'files': uploaded,
+            'message': f'Uploaded {len(uploaded)} receipt(s)'
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

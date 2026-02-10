@@ -43,86 +43,6 @@
             font-size: 16px;
         }
 
-        .upload-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .dropzone {
-            background: white;
-            border: 2px dashed #d1d1d6;
-            border-radius: 12px;
-            padding: 40px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .dropzone:hover {
-            border-color: #007aff;
-            background: #f5f5f7;
-        }
-
-        .dropzone.dragging {
-            border-color: #007aff;
-            background: #e8f4fd;
-        }
-
-        .dropzone-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
-        }
-
-        .dropzone-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        .dropzone-subtitle {
-            font-size: 14px;
-            color: #86868b;
-        }
-
-        .dropzone input[type="file"] {
-            display: none;
-        }
-
-        .statement-tabs {
-            display: flex;
-            gap: 8px;
-            background: white;
-            padding: 12px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
-            overflow-x: auto;
-        }
-
-        .statement-tab {
-            padding: 8px 16px;
-            border: none;
-            background: transparent;
-            color: #1d1d1f;
-            cursor: pointer;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 500;
-            white-space: nowrap;
-            transition: all 0.2s;
-        }
-
-        .statement-tab:hover {
-            background: #f5f5f7;
-        }
-
-        .statement-tab.active {
-            background: #007aff;
-            color: white;
-        }
-
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -344,37 +264,6 @@
         .download-link:hover {
             text-decoration: underline;
         }
-
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: white;
-            padding: 16px 24px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            display: none;
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateY(100px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        .toast.success {
-            border-left: 4px solid #34c759;
-        }
-
-        .toast.error {
-            border-left: 4px solid #ff3b30;
-        }
     </style>
 </head>
 <body>
@@ -386,26 +275,6 @@
                 <button class="refresh-btn" onclick="loadAll()">🔄 Refresh</button>
             </div>
         </header>
-
-        <div class="upload-section">
-            <div class="dropzone" id="statement-dropzone" onclick="document.getElementById('statement-input').click()">
-                <div class="dropzone-icon">📄</div>
-                <div class="dropzone-title">Upload Statement</div>
-                <div class="dropzone-subtitle">Drop CSV/Excel file or click to browse</div>
-                <input type="file" id="statement-input" accept=".csv,.xlsx,.xls" onchange="uploadStatement(this)">
-            </div>
-
-            <div class="dropzone" id="receipts-dropzone" onclick="document.getElementById('receipts-input').click()">
-                <div class="dropzone-icon">📎</div>
-                <div class="dropzone-title">Upload Receipts</div>
-                <div class="dropzone-subtitle">Drop PDF files or click to browse</div>
-                <input type="file" id="receipts-input" accept=".pdf" multiple onchange="uploadReceipts(this)">
-            </div>
-        </div>
-
-        <div class="statement-tabs" id="statement-tabs">
-            <div class="loading" style="width: 100%;">Loading statements...</div>
-        </div>
 
         <div class="stats-grid" id="stats">
             <div class="stat-card">
@@ -468,167 +337,18 @@
         </div>
     </div>
 
-    <div class="toast" id="toast"></div>
-
     <script>
         let currentFilter = 'all';
-        let currentStatement = null;
-
-        // Drag and drop for statement
-        const statementDropzone = document.getElementById('statement-dropzone');
-        statementDropzone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            statementDropzone.classList.add('dragging');
-        });
-        statementDropzone.addEventListener('dragleave', () => {
-            statementDropzone.classList.remove('dragging');
-        });
-        statementDropzone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            statementDropzone.classList.remove('dragging');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleStatementUpload(files[0]);
-            }
-        });
-
-        // Drag and drop for receipts
-        const receiptsDropzone = document.getElementById('receipts-dropzone');
-        receiptsDropzone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            receiptsDropzone.classList.add('dragging');
-        });
-        receiptsDropzone.addEventListener('dragleave', () => {
-            receiptsDropzone.classList.remove('dragging');
-        });
-        receiptsDropzone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            receiptsDropzone.classList.remove('dragging');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleReceiptsUpload(files);
-            }
-        });
-
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = `toast ${type}`;
-            toast.style.display = 'block';
-            setTimeout(() => {
-                toast.style.display = 'none';
-            }, 3000);
-        }
-
-        async function uploadStatement(input) {
-            if (input.files.length > 0) {
-                await handleStatementUpload(input.files[0]);
-            }
-        }
-
-        async function handleStatementUpload(file) {
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                const response = await fetch('/api/upload/statement', {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    showToast(data.message, 'success');
-                    await loadStatements();
-                    loadAll();
-                } else {
-                    showToast(data.error || 'Upload failed', 'error');
-                }
-            } catch (error) {
-                console.error('Error uploading statement:', error);
-                showToast('Upload failed', 'error');
-            }
-        }
-
-        async function uploadReceipts(input) {
-            if (input.files.length > 0) {
-                await handleReceiptsUpload(input.files);
-            }
-        }
-
-        async function handleReceiptsUpload(files) {
-            const formData = new FormData();
-            for (let file of files) {
-                formData.append('files', file);
-            }
-
-            try {
-                const response = await fetch('/api/upload/receipt', {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    showToast(data.message, 'success');
-                    loadAll();
-                } else {
-                    showToast(data.error || 'Upload failed', 'error');
-                }
-            } catch (error) {
-                console.error('Error uploading receipts:', error);
-                showToast('Upload failed', 'error');
-            }
-        }
-
-        async function loadStatements() {
-            try {
-                const response = await fetch('/api/statements');
-                const statements = await response.json();
-                
-                const tabsContainer = document.getElementById('statement-tabs');
-                tabsContainer.innerHTML = '';
-                
-                if (statements.length === 0) {
-                    tabsContainer.innerHTML = '<p style="color: #86868b; padding: 10px;">No statements uploaded yet</p>';
-                    return;
-                }
-                
-                statements.forEach((statement, index) => {
-                    const btn = document.createElement('button');
-                    btn.className = 'statement-tab' + (index === 0 ? ' active' : '');
-                    btn.textContent = statement.name.replace(/\.(csv|xlsx|xls)$/i, '');
-                    btn.onclick = () => selectStatement(statement.name, btn);
-                    tabsContainer.appendChild(btn);
-                    
-                    if (index === 0) {
-                        currentStatement = statement.name;
-                    }
-                });
-            } catch (error) {
-                console.error('Error loading statements:', error);
-            }
-        }
-
-        function selectStatement(statementName, element) {
-            currentStatement = statementName;
-            document.querySelectorAll('.statement-tab').forEach(t => t.classList.remove('active'));
-            element.classList.add('active');
-            loadAll();
-        }
 
         async function loadSummary() {
             try {
-                const url = currentStatement 
-                    ? `/api/summary?statement=${encodeURIComponent(currentStatement)}`
-                    : '/api/summary';
-                const response = await fetch(url);
+                const response = await fetch('/api/summary');
                 const data = await response.json();
                 
-                document.getElementById('stat-total').textContent = data.total || 0;
-                document.getElementById('stat-matched').textContent = data.matched || 0;
-                document.getElementById('stat-unmatched').textContent = data.unmatched || 0;
-                document.getElementById('stat-rate').textContent = (data.match_rate || 0) + '%';
+                document.getElementById('stat-total').textContent = data.total;
+                document.getElementById('stat-matched').textContent = data.matched;
+                document.getElementById('stat-unmatched').textContent = data.unmatched;
+                document.getElementById('stat-rate').textContent = data.match_rate + '%';
             } catch (error) {
                 console.error('Error loading summary:', error);
             }
@@ -638,21 +358,11 @@
             currentFilter = filter;
             
             try {
-                const url = currentStatement
-                    ? `/api/transactions?filter=${filter}&statement=${encodeURIComponent(currentStatement)}`
-                    : `/api/transactions?filter=${filter}`;
-                const response = await fetch(url);
+                const response = await fetch(`/api/transactions?filter=${filter}`);
                 const transactions = await response.json();
                 
                 const tbody = document.getElementById('transactions-body');
                 tbody.innerHTML = '';
-                
-                if (transactions.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #86868b; padding: 40px;">No transactions found</td></tr>';
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('transactions-table').style.display = 'block';
-                    return;
-                }
                 
                 transactions.forEach(tx => {
                     const row = document.createElement('tr');
@@ -753,9 +463,11 @@
         }
 
         function switchTab(tab, element) {
+            // Update active tab
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             element.classList.add('active');
             
+            // Show appropriate section
             document.getElementById('transactions-section').style.display = 'none';
             document.getElementById('receipts-section').style.display = 'none';
             document.getElementById('renamed-section').style.display = 'none';
@@ -777,11 +489,11 @@
             loadTransactions(currentFilter);
         }
 
+        // Load data on page load
         window.onload = function() {
-            loadStatements().then(() => {
-                loadAll();
-            });
+            loadAll();
             
+            // Auto-refresh every 10 seconds
             setInterval(() => {
                 if (currentFilter !== 'receipts' && currentFilter !== 'renamed') {
                     loadSummary();
