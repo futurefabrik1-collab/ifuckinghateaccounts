@@ -42,6 +42,29 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
             margin-bottom: 30px;
             border: 1px solid rgba(255, 255, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: 2.5%;
+            left: 20px;
+            width: auto;
+            height: 95%;
+            background-image: url('/static/logo.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: left center;
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        header > * {
+            position: relative;
+            z-index: 1;
         }
 
         .header-top {
@@ -57,12 +80,6 @@
             gap: 15px;
         }
 
-        .header-logo {
-            width: 60px;
-            height: 60px;
-            object-fit: contain;
-            filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
-        }
 
         h1 {
             font-size: 38.4px;
@@ -840,7 +857,6 @@
         <header>
             <div class="header-top">
                 <div class="header-title">
-                    <img src="/static/logo.png" alt="Logo" class="header-logo">
                     <h1>💰 I FUCKING HATE ACCOUNTS 💰</h1>
                 </div>
                 <div class="header-actions">
