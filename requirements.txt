@@ -60,3 +60,4 @@ alembic>=1.13.0
 
 # Production server
 gunicorn>=21.2.0
+gevent==24.2.1
