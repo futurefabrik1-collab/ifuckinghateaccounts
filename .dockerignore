@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environment
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Data and logs (mount as volumes instead)
+statements/*/
+logs/
+*.log
+data/*.db
+
+# Temporary files
+tmp_*
+*.tmp
+
+# Backup files
+*_backup_*
+backups/
+
+# Local config
+.env
+
+# Documentation
+*.md
+!README.md
+
+# Desktop launcher
+*.command
+*.sh

@@ -33,6 +33,8 @@ watchdog>=3.0.0
 # Web interface
 flask>=3.0.0
 flask-cors>=4.0.0
+flask-login>=0.6.3
+flask-wtf>=1.2.1
 
 # Configuration
 python-dotenv>=1.0.0
@@ -45,3 +47,16 @@ psutil>=5.9.6
 
 # Rate limiting (optional)
 Flask-Limiter>=3.5.0
+
+# Database
+sqlalchemy>=2.0.23
+psycopg2-binary>=2.9.9
+
+# Encryption
+cryptography>=41.0.7
+
+# Migrations
+alembic>=1.13.0
+
+# Production server
+gunicorn>=21.2.0

@@ -1,0 +1,69 @@
+# I FUCKING HATE ACCOUNTS - Docker Compose Configuration
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: receipts_db
+    environment:
+      POSTGRES_DB: receipts
+      POSTGRES_USER: receipts_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_this_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U receipts_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - receipts_network
+
+  # Flask Application
+  web:
+    build: .
+    container_name: receipts_app
+    environment:
+      - DATABASE_URL=postgresql://receipts_user:${DB_PASSWORD:-change_this_password}@db:5432/receipts
+      - SECRET_KEY=${SECRET_KEY:-development_secret_key_change_in_production}
+      - DEBUG=False
+      - FLASK_ENV=production
+    volumes:
+      - ./statements:/app/statements
+      - ./logs:/app/logs
+      - ./data:/app/data
+    ports:
+      - "5001:5001"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - receipts_network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy (Optional - for production)
+  nginx:
+    image: nginx:alpine
+    container_name: receipts_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - web
+    networks:
+      - receipts_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  receipts_network:
+    driver: bridge
