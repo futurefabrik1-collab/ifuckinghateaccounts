@@ -31,16 +31,15 @@ RUN mkdir -p statements logs data .cache/ocr
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_APP=web/app.py
 
+# Make startup script executable
+RUN chmod +x /app/startup.sh
+
 # Expose port
 EXPOSE 5001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:5001/api/health')"
-
-# Startup script that initializes DB and creates admin, then starts app
-COPY startup.sh /app/startup.sh
-RUN chmod +x /app/startup.sh
 
 # Run application
 CMD ["/app/startup.sh"]
