@@ -49,7 +49,34 @@ class StatementParser:
                 else:
                     delimiter = ','
             
+            # Read CSV and detect if it has headers
             self.df = pd.read_csv(self.file_path, sep=delimiter, encoding='utf-8-sig')
+            
+            # Check if it looks like there are no headers
+            first_col = str(self.df.columns[0])
+            has_headers = True
+            
+            # If first column looks like data (date pattern or numbers), probably no headers
+            if (any(char.isdigit() for char in first_col) and 
+                ('.' in first_col or '/' in first_col or first_col.replace('.', '').replace('/', '').isdigit())):
+                has_headers = False
+            
+            if not has_headers:
+                # Reload without headers and assign German column names
+                self.df = pd.read_csv(self.file_path, sep=delimiter, encoding='utf-8-sig', header=None)
+                if len(self.df.columns) >= 3:
+                    # Use the column names that will be passed to load_statement
+                    self.df.columns = [date_column, description_column, amount_column] + [f'Col{i}' for i in range(3, len(self.df.columns))]
+                else:
+                    self.df.columns = [f'Col{i}' for i in range(len(self.df.columns))]
+            else:
+                # Has headers - map common English names to German if needed
+                column_mapping = {
+                    'Date': date_column,
+                    'Description': description_column,
+                    'Amount': amount_column
+                }
+                self.df.rename(columns=column_mapping, inplace=True)
         elif self.file_path.suffix.lower() in ['.xlsx', '.xls']:
             self.df = pd.read_excel(self.file_path)
         else:
