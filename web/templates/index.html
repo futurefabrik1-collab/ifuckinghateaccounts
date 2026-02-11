@@ -1485,6 +1485,41 @@
             document.getElementById('viewer-body').innerHTML = '';
         }
 
+        async function deleteReceipt(filepath, filename) {
+            // Show choice dialog
+            const choice = confirm(`What would you like to do with "${filename}"?\n\nOK = Move to Pool (can use later)\nCancel = Delete Permanently`);
+            
+            const action = choice ? 'pool' : 'delete';
+            
+            if (!choice) {
+                // Permanent delete - extra confirmation
+                const confirmDelete = confirm(`⚠️ WARNING: This will PERMANENTLY delete "${filename}"!\n\nThis cannot be undone. Are you sure?`);
+                if (!confirmDelete) {
+                    return; // User cancelled
+                }
+            }
+            
+            try {
+                const response = await fetch('/api/delete-receipt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filepath, action })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    loadAll(); // Reload everything
+                } else {
+                    showToast(data.error || 'Failed to delete receipt', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting receipt:', error);
+                showToast('Error deleting receipt', 'error');
+            }
+        }
+
         // Close modal on background click
         document.getElementById('description-modal').addEventListener('click', function(e) {
             if (e.target === this) {
@@ -2061,6 +2096,7 @@
                         <div style="display: flex; gap: 8px;">
                             <button onclick="viewReceipt('${receipt.path}', '${receipt.name}')" class="download-link" style="background: #007aff; text-decoration: none; padding: 6px 12px; border: none; cursor: pointer;">👁️ View</button>
                             <a href="/api/download/${receipt.path}" class="download-link" download>⬇️ Download</a>
+                            <button onclick="deleteReceipt('${receipt.path}', '${receipt.name}')" class="download-link" style="background: #ff3b30; text-decoration: none; padding: 6px 12px; border: none; cursor: pointer;">🗑️ Delete</button>
                         </div>
                     `;
                     
@@ -2102,6 +2138,7 @@
                         <div style="display: flex; gap: 8px;">
                             <button onclick="viewReceipt('${receipt.path}', '${receipt.name}')" class="download-link" style="background: #007aff; text-decoration: none; padding: 6px 12px; border: none; cursor: pointer;">👁️ View</button>
                             <a href="/api/download/${receipt.path}" class="download-link" download>⬇️ Download</a>
+                            <button onclick="deleteReceipt('${receipt.path}', '${receipt.name}')" class="download-link" style="background: #ff3b30; text-decoration: none; padding: 6px 12px; border: none; cursor: pointer;">🗑️ Delete</button>
                         </div>
                     `;
                     

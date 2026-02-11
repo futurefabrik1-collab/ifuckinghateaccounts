@@ -648,6 +648,59 @@ def view_file(filepath):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/delete-receipt', methods=['POST'])
+def delete_receipt():
+    """Delete a receipt file or move it to pool"""
+    try:
+        data = request.json
+        filepath = data.get('filepath')
+        action = data.get('action', 'delete')  # 'delete' or 'pool'
+        
+        if not filepath:
+            return jsonify({'error': 'No filepath provided'}), 400
+        
+        file_path = BASE_DIR / filepath
+        
+        if not file_path.exists():
+            return jsonify({'error': 'File not found'}), 404
+        
+        filename = file_path.name
+        
+        if action == 'pool':
+            # Move to pool folder
+            pool_folder = BASE_DIR / 'statements' / 'pool'
+            pool_folder.mkdir(parents=True, exist_ok=True)
+            
+            # Handle duplicate filenames in pool
+            destination = pool_folder / filename
+            counter = 1
+            while destination.exists():
+                name, ext = filename.rsplit('.', 1) if '.' in filename else (filename, '')
+                new_filename = f"{name}_{counter}.{ext}" if ext else f"{name}_{counter}"
+                destination = pool_folder / new_filename
+                counter += 1
+            
+            shutil.move(str(file_path), str(destination))
+            return jsonify({
+                'success': True,
+                'message': f'Moved "{filename}" to pool',
+                'action': 'pool'
+            })
+        else:
+            # Permanent delete
+            file_path.unlink()
+            return jsonify({
+                'success': True,
+                'message': f'Permanently deleted "{filename}"',
+                'action': 'delete'
+            })
+            
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/clear-statement', methods=['POST'])
 def clear_statement():
     """Clear/reset a statement - remove all matches and move receipts back"""
