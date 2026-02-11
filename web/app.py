@@ -632,6 +632,22 @@ def download_file(filepath):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/view/<path:filepath>')
+def view_file(filepath):
+    """View a file inline (for PDF preview)"""
+    try:
+        file_path = BASE_DIR / filepath
+        if file_path.exists() and file_path.is_file():
+            # Determine mimetype
+            ext = file_path.suffix.lower()
+            mimetype = 'application/pdf' if ext == '.pdf' else 'image/png' if ext == '.png' else 'application/octet-stream'
+            return send_file(file_path, mimetype=mimetype, as_attachment=False)
+        else:
+            return jsonify({'error': 'File not found'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/clear-statement', methods=['POST'])
 def clear_statement():
     """Clear/reset a statement - remove all matches and move receipts back"""

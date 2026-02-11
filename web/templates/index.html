@@ -466,6 +466,84 @@
             display: flex;
         }
 
+        .viewer-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .viewer-modal.show {
+            display: flex;
+        }
+
+        .viewer-content {
+            width: 90%;
+            height: 90%;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .viewer-header {
+            padding: 20px;
+            background: #f5f5f7;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #d2d2d7;
+        }
+
+        .viewer-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1d1d1f;
+        }
+
+        .viewer-close {
+            padding: 8px 16px;
+            background: #ff3b30;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .viewer-close:hover {
+            background: #ff2d1f;
+        }
+
+        .viewer-body {
+            flex: 1;
+            overflow: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f5f5f7;
+        }
+
+        .viewer-body iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .viewer-body img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
         .modal-content {
             background: white;
             padding: 30px;
@@ -1069,6 +1147,17 @@
         </div>
     </div>
 
+    <!-- Receipt Viewer Modal -->
+    <div class="viewer-modal" id="viewer-modal">
+        <div class="viewer-content">
+            <div class="viewer-header">
+                <div class="viewer-title" id="viewer-filename">Receipt Viewer</div>
+                <button class="viewer-close" onclick="closeViewer()">Close</button>
+            </div>
+            <div class="viewer-body" id="viewer-body"></div>
+        </div>
+    </div>
+
     <script>
         let currentFilter = 'all';
         let currentStatement = null;
@@ -1367,6 +1456,33 @@
 
         function closeDescriptionModal() {
             document.getElementById('description-modal').classList.remove('show');
+        }
+
+        function viewReceipt(filepath, filename) {
+            const modal = document.getElementById('viewer-modal');
+            const body = document.getElementById('viewer-body');
+            const title = document.getElementById('viewer-filename');
+            
+            title.textContent = filename;
+            
+            // Determine file type and create appropriate viewer
+            const ext = filename.split('.').pop().toLowerCase();
+            
+            if (ext === 'pdf') {
+                body.innerHTML = `<iframe src="/api/view/${filepath}"></iframe>`;
+            } else if (['png', 'jpg', 'jpeg', 'gif'].includes(ext)) {
+                body.innerHTML = `<img src="/api/view/${filepath}" alt="${filename}">`;
+            } else {
+                body.innerHTML = `<p style="padding: 40px; text-align: center;">Preview not available for this file type</p>`;
+            }
+            
+            modal.classList.add('show');
+        }
+
+        function closeViewer() {
+            const modal = document.getElementById('viewer-modal');
+            modal.classList.remove('show');
+            document.getElementById('viewer-body').innerHTML = '';
         }
 
         // Close modal on background click
@@ -1942,7 +2058,10 @@
                             <div class="file-name">${receipt.name}</div>
                             <div class="file-meta">${sizeKB} KB • ${date}</div>
                         </div>
-                        <a href="/api/download/${receipt.path}" class="download-link" download>Download</a>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="viewReceipt('${receipt.path}', '${receipt.name}')" class="download-link" style="background: #007aff; text-decoration: none; padding: 6px 12px; border: none; cursor: pointer;">👁️ View</button>
+                            <a href="/api/download/${receipt.path}" class="download-link" download>⬇️ Download</a>
+                        </div>
                     `;
                     
                     list.appendChild(item);
@@ -1980,7 +2099,10 @@
                             <div class="file-name">${receipt.name}</div>
                             <div class="file-meta">${sizeKB} KB • ${date}</div>
                         </div>
-                        <a href="/api/download/${receipt.path}" class="download-link" download>Download</a>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="viewReceipt('${receipt.path}', '${receipt.name}')" class="download-link" style="background: #007aff; text-decoration: none; padding: 6px 12px; border: none; cursor: pointer;">👁️ View</button>
+                            <a href="/api/download/${receipt.path}" class="download-link" download>⬇️ Download</a>
+                        </div>
                     `;
                     
                     list.appendChild(item);
