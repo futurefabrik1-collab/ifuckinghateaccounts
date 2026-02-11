@@ -1168,6 +1168,23 @@
         </div>
     </div>
 
+    <!-- Assign from Pool Modal -->
+    <div class="description-modal" id="assign-pool-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px; max-height: 80vh; overflow-y: auto;">
+            <div class="modal-header">Assign Receipt to Transaction</div>
+            <div class="modal-body" style="margin-bottom: 20px;">
+                <p style="margin-bottom: 15px;">
+                    Assigning: <strong id="assign-pool-filename"></strong>
+                </p>
+                <p style="color: #86868b; font-size: 13px; margin-bottom: 15px;">
+                    Select a transaction to assign this receipt to:
+                </p>
+                <div id="assign-pool-list" style="max-height: 400px; overflow-y: auto;"></div>
+            </div>
+            <button class="modal-close" onclick="closeAssignPoolModal()">Cancel</button>
+        </div>
+    </div>
+
     <script>
         let currentFilter = 'all';
         let currentStatement = null;
@@ -2227,8 +2244,95 @@
                 return;
             }
             
-            showToast('This feature will be implemented next - drag and drop to transaction or select transaction', 'info');
-            // TODO: Implement assign from pool
+            try {
+                // Get all transactions for current statement
+                const response = await fetch(`/api/transactions?statement=${encodeURIComponent(currentStatement)}`);
+                const transactions = await response.json();
+                
+                // Filter to only unmatched transactions
+                const unmatched = transactions.filter(t => !t.matching_receipt_found && !t.no_receipt_needed);
+                
+                if (unmatched.length === 0) {
+                    showToast('No unmatched transactions available', 'info');
+                    return;
+                }
+                
+                // Show selection modal
+                showAssignPoolModal(filepath, filename, unmatched);
+            } catch (error) {
+                console.error('Error loading transactions:', error);
+                showToast('Error loading transactions', 'error');
+            }
+        }
+
+        function showAssignPoolModal(filepath, filename, transactions) {
+            const modal = document.getElementById('assign-pool-modal');
+            const list = document.getElementById('assign-pool-list');
+            
+            document.getElementById('assign-pool-filename').textContent = filename;
+            
+            list.innerHTML = '';
+            
+            transactions.forEach((tx, index) => {
+                const item = document.createElement('div');
+                item.className = 'transaction-select-item';
+                item.style.cssText = 'padding: 15px; border: 1px solid #d1d1d6; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s;';
+                item.onmouseover = () => item.style.background = '#f5f5f7';
+                item.onmouseout = () => item.style.background = 'white';
+                
+                const amount = parseFloat(tx.amount || 0);
+                const amountColor = amount < 0 ? '#ff3b30' : '#34c759';
+                
+                item.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; margin-bottom: 5px;">${tx.date}</div>
+                            <div style="color: #86868b; font-size: 13px;">${tx.description}</div>
+                        </div>
+                        <div style="font-weight: 700; font-size: 16px; color: ${amountColor};">
+                            €${Math.abs(amount).toFixed(2)}
+                        </div>
+                    </div>
+                `;
+                
+                item.onclick = () => confirmAssignPoolToTransaction(filepath, filename, tx.row_index);
+                
+                list.appendChild(item);
+            });
+            
+            modal.style.display = 'flex';
+        }
+
+        async function confirmAssignPoolToTransaction(filepath, filename, rowIndex) {
+            try {
+                // Copy from pool to statement's receipts folder
+                const response = await fetch('/api/assign-from-pool', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        pool_filepath: filepath,
+                        statement: currentStatement,
+                        row_index: rowIndex
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    closeAssignPoolModal();
+                    loadAll(); // Reload everything
+                } else {
+                    showToast(data.error || 'Failed to assign receipt', 'error');
+                }
+            } catch (error) {
+                console.error('Error assigning receipt:', error);
+                showToast('Error assigning receipt', 'error');
+            }
+        }
+
+        function closeAssignPoolModal() {
+            document.getElementById('assign-pool-modal').style.display = 'none';
         }
 
         function setupRowDragAndDrop(row) {

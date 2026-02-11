@@ -678,6 +678,80 @@ def get_pool_receipts():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/assign-from-pool', methods=['POST'])
+def assign_from_pool():
+    """Assign a receipt from the pool to a transaction"""
+    try:
+        data = request.json
+        pool_filepath = data.get('pool_filepath')
+        statement = data.get('statement')
+        row_index = data.get('row_index')
+        
+        if not all([pool_filepath, statement, row_index is not None]):
+            return jsonify({'error': 'Missing required parameters'}), 400
+        
+        pool_file = BASE_DIR / pool_filepath
+        
+        if not pool_file.exists():
+            return jsonify({'error': 'Pool receipt not found'}), 404
+        
+        # Copy receipt from pool to statement's receipts folder
+        statement_receipts = BASE_DIR / 'statements' / statement / 'receipts'
+        statement_receipts.mkdir(parents=True, exist_ok=True)
+        
+        filename = pool_file.name
+        destination = statement_receipts / filename
+        
+        # Handle duplicate filenames
+        counter = 1
+        while destination.exists():
+            name, ext = filename.rsplit('.', 1) if '.' in filename else (filename, '')
+            new_filename = f"{name}_{counter}.{ext}" if ext else f"{name}_{counter}"
+            destination = statement_receipts / new_filename
+            counter += 1
+        
+        # Copy file (keep in pool)
+        shutil.copy2(str(pool_file), str(destination))
+        
+        # Now assign it to the transaction using existing assign_receipt endpoint logic
+        statement_file = BASE_DIR / 'statements' / statement / f'{statement}.csv'
+        output_csv = BASE_DIR / 'statements' / statement / f'{statement}_matches.csv'
+        
+        # Load the CSV
+        csv_file = output_csv if output_csv.exists() else statement_file
+        df = pd.read_csv(csv_file, sep=';', encoding='utf-8-sig')
+        
+        # Update the transaction
+        df.loc[row_index, 'Matching Receipt Found'] = True
+        df.loc[row_index, 'Matched Receipt File'] = destination.name
+        df.loc[row_index, 'Match Confidence'] = 100
+        df.loc[row_index, 'No Receipt Needed'] = False
+        
+        # Clear manually unmatched flag
+        if 'Manually_Unmatched' not in df.columns:
+            df['Manually_Unmatched'] = False
+        df.loc[row_index, 'Manually_Unmatched'] = False
+        
+        # Save CSV
+        df.to_csv(output_csv, sep=';', index=False, encoding='utf-8-sig')
+        
+        # Move receipt to matched folder
+        matched_folder = BASE_DIR / 'statements' / statement / 'matched_receipts'
+        matched_folder.mkdir(parents=True, exist_ok=True)
+        matched_destination = matched_folder / destination.name
+        shutil.move(str(destination), str(matched_destination))
+        
+        return jsonify({
+            'success': True,
+            'message': f'Assigned "{filename}" to transaction from pool'
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/delete-receipt', methods=['POST'])
 def delete_receipt():
     """Delete a receipt file or move it to pool"""
