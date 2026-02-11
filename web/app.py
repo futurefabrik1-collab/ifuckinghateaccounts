@@ -1272,14 +1272,21 @@ def open_folder():
         import subprocess
         
         system = platform.system()
-        if system == 'Darwin':  # macOS
-            subprocess.Popen(['open', folder_path])
-        elif system == 'Windows':
-            subprocess.Popen(['explorer', folder_path])
-        else:  # Linux
-            subprocess.Popen(['xdg-open', folder_path])
-        
-        return jsonify({'success': True, 'message': f'Opened folder: {os.path.basename(folder_path)}'})
+        try:
+            if system == 'Darwin':  # macOS
+                subprocess.Popen(['open', folder_path])
+            elif system == 'Windows':
+                subprocess.Popen(['explorer', folder_path])
+            else:  # Linux
+                # Check if xdg-open exists
+                try:
+                    subprocess.Popen(['xdg-open', folder_path])
+                except FileNotFoundError:
+                    return jsonify({'error': 'Cannot open folders on this system (server environment)'}), 400
+            
+            return jsonify({'success': True, 'message': f'Opened folder: {os.path.basename(folder_path)}'})
+        except FileNotFoundError as e:
+            return jsonify({'error': f'Cannot open folders on this system: {str(e)}'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
