@@ -123,11 +123,14 @@ class Database:
 
 
 # Global database instance
-db = Database()
+db = None
 
 
 def init_database():
     """Initialize database (call on app startup)"""
+    global db
+    if db is None:
+        db = Database()
     db.init_db()
     db.create_tables()
     logger.info("Database initialization complete")
