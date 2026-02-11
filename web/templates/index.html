@@ -230,6 +230,34 @@
             box-shadow: 0 8px 30px rgba(102, 126, 234, 0.3);
         }
 
+        .stat-card.completion-card {
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card.completion-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.30);
+            backdrop-filter: blur(10px);
+            z-index: 0;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card.completion-card .stat-value,
+        .stat-card.completion-card .stat-label,
+        .stat-card.completion-card .learn-btn {
+            position: relative;
+            z-index: 1;
+        }
+
         .stat-value {
             font-size: 36px;
             font-weight: 700;
@@ -937,7 +965,7 @@
                 <div class="stat-value missing" id="stat-missing">-</div>
                 <div class="stat-label">Missing Receipts</div>
             </div>
-            <div class="stat-card" style="position: relative;">
+            <div class="stat-card completion-card" id="completion-card" style="position: relative;">
                 <div class="stat-value completion" id="stat-completion">-</div>
                 <div class="stat-label">Completion %</div>
                 <button id="learn-btn-card" class="learn-btn" onclick="updateLearning()" disabled style="display: none; position: absolute; right: 20px; top: 50%; transform: translateY(-50%); min-width: auto; padding: 8px 16px; font-size: 12px;">
@@ -1474,6 +1502,31 @@
             }, 3000);
         }
 
+        function updateCompletionBackground(completionRate) {
+            const card = document.getElementById('completion-card');
+            let imageNumber = 1;
+            
+            if (completionRate < 20) {
+                imageNumber = 1;
+            } else if (completionRate < 40) {
+                imageNumber = 2;
+            } else if (completionRate < 60) {
+                imageNumber = 3;
+            } else if (completionRate < 80) {
+                imageNumber = 4;
+            } else if (completionRate < 100) {
+                imageNumber = 5;
+            } else {
+                imageNumber = 6;
+            }
+            
+            card.style.backgroundImage = `url('/static/images/${imageNumber}.png')`;
+            
+            // Adjust overlay opacity - more transparent as completion increases
+            const overlay = window.getComputedStyle(card, '::before');
+            card.style.setProperty('--overlay-opacity', '0.3');
+        }
+
         async function uploadStatement(input) {
             // Restrict to single file only
             if (input.files.length > 1) {
@@ -1710,6 +1763,9 @@
                 document.getElementById('stat-no-receipt').textContent = data.no_receipt_needed || 0;
                 document.getElementById('stat-missing').textContent = data.missing || 0;
                 document.getElementById('stat-completion').textContent = (data.completion_rate || 0) + '%';
+                
+                // Update completion card background
+                updateCompletionBackground(data.completion_rate || 0);
                 
                 // Show "Update Learning" button if 100% complete
                 const learnBtnCard = document.getElementById('learn-btn-card');
