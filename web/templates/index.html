@@ -1068,6 +1068,7 @@
             <button class="tab" onclick="switchTab('unmatched', this)">Unmatched Only</button>
             <button class="tab" onclick="switchTab('receipts', this)">Receipts in Folder</button>
             <button class="tab" onclick="switchTab('renamed', this)">Renamed Receipts</button>
+            <button class="tab" onclick="switchTab('pool', this)">📦 Receipt Pool</button>
         </div>
 
         <div class="content-section" id="transactions-section">
@@ -1103,6 +1104,19 @@
         <div class="content-section" id="renamed-section" style="display: none;">
             <h2 style="margin-bottom: 20px;">Renamed Receipts</h2>
             <div class="file-list" id="renamed-list"></div>
+        </div>
+
+        <div class="content-section" id="pool-section" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">📦 Receipt Pool</h2>
+                <input type="text" id="pool-search" placeholder="Search receipts..." 
+                       style="padding: 8px 12px; border: 1px solid #d1d1d6; border-radius: 8px; width: 300px; font-size: 14px;"
+                       oninput="filterPool()">
+            </div>
+            <p style="color: #86868b; margin-bottom: 15px; font-size: 14px;">
+                Receipts you've moved to the pool. These can be assigned to any statement.
+            </p>
+            <div class="file-list" id="pool-list"></div>
         </div>
     </div>
 
@@ -2149,6 +2163,78 @@
             }
         }
 
+        let allPoolReceipts = [];
+
+        async function loadPool() {
+            try {
+                const response = await fetch('/api/pool');
+                allPoolReceipts = await response.json();
+                
+                renderPool(allPoolReceipts);
+            } catch (error) {
+                console.error('Error loading pool:', error);
+            }
+        }
+
+        function renderPool(receipts) {
+            const list = document.getElementById('pool-list');
+            list.innerHTML = '';
+            
+            if (receipts.length === 0) {
+                list.innerHTML = '<p style="text-align: center; color: #86868b; padding: 40px;">No receipts in pool yet. Delete receipts and choose "Move to Pool" to add them here.</p>';
+                return;
+            }
+            
+            receipts.forEach(receipt => {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.dataset.filename = receipt.name.toLowerCase();
+                
+                const sizeKB = (receipt.size / 1024).toFixed(1);
+                const date = new Date(receipt.modified).toLocaleString();
+                
+                item.innerHTML = `
+                    <div>
+                        <div class="file-name">${receipt.name}</div>
+                        <div class="file-meta">${sizeKB} KB • ${date}</div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="viewReceipt('${receipt.path}', '${receipt.name}')" class="download-link" style="background: #007aff; text-decoration: none; padding: 6px 12px; border: none; cursor: pointer;">View</button>
+                        <a href="/api/download/${receipt.path}" class="download-link" download>Download</a>
+                        <button onclick="assignFromPool('${receipt.path}', '${receipt.name}')" class="download-link" style="background: #34c759; text-decoration: none; padding: 6px 12px; border: none; cursor: pointer;">Assign</button>
+                        <button onclick="deleteReceipt('${receipt.path}', '${receipt.name}')" class="download-link" style="background: #ff3b30; text-decoration: none; padding: 6px 12px; border: none; cursor: pointer;">Delete</button>
+                    </div>
+                `;
+                
+                list.appendChild(item);
+            });
+        }
+
+        function filterPool() {
+            const searchTerm = document.getElementById('pool-search').value.toLowerCase();
+            
+            if (!searchTerm) {
+                renderPool(allPoolReceipts);
+                return;
+            }
+            
+            const filtered = allPoolReceipts.filter(receipt => 
+                receipt.name.toLowerCase().includes(searchTerm)
+            );
+            
+            renderPool(filtered);
+        }
+
+        async function assignFromPool(filepath, filename) {
+            if (!currentStatement) {
+                showToast('Please select a statement first', 'error');
+                return;
+            }
+            
+            showToast('This feature will be implemented next - drag and drop to transaction or select transaction', 'info');
+            // TODO: Implement assign from pool
+        }
+
         function setupRowDragAndDrop(row) {
             row.addEventListener('dragover', (e) => {
                 e.preventDefault();
@@ -2262,6 +2348,7 @@
             document.getElementById('transactions-section').style.display = 'none';
             document.getElementById('receipts-section').style.display = 'none';
             document.getElementById('renamed-section').style.display = 'none';
+            document.getElementById('pool-section').style.display = 'none';
             
             if (tab === 'receipts') {
                 document.getElementById('receipts-section').style.display = 'block';
@@ -2269,6 +2356,9 @@
             } else if (tab === 'renamed') {
                 document.getElementById('renamed-section').style.display = 'block';
                 loadRenamedReceipts();
+            } else if (tab === 'pool') {
+                document.getElementById('pool-section').style.display = 'block';
+                loadPool();
             } else {
                 document.getElementById('transactions-section').style.display = 'block';
                 loadTransactions(tab);

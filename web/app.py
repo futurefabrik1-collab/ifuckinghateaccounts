@@ -648,6 +648,36 @@ def view_file(filepath):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/pool')
+def get_pool_receipts():
+    """Get all receipts in the pool"""
+    try:
+        pool_folder = BASE_DIR / 'statements' / 'pool'
+        
+        if not pool_folder.exists():
+            return jsonify([])
+        
+        receipts = []
+        for file_path in pool_folder.glob('*'):
+            if file_path.is_file() and not file_path.name.startswith('.'):
+                stat = file_path.stat()
+                receipts.append({
+                    'name': file_path.name,
+                    'path': str(file_path.relative_to(BASE_DIR)),
+                    'size': stat.st_size,
+                    'modified': stat.st_mtime
+                })
+        
+        # Sort by modification time, newest first
+        receipts.sort(key=lambda x: x['modified'], reverse=True)
+        
+        return jsonify(receipts)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/delete-receipt', methods=['POST'])
 def delete_receipt():
     """Delete a receipt file or move it to pool"""
