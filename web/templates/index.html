@@ -134,54 +134,14 @@
             overflow: hidden;
         }
 
-        #receipts-dropzone {
-            background-image: url('/static/fuckoff.png');
-            background-size: contain;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
-
-        #statement-dropzone {
-            background-image: url('/static/ray.png');
-            background-size: contain;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
-
-        #receipts-dropzone::before,
-        #statement-dropzone::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.3);
-            z-index: 0;
-        }
-
-        #receipts-dropzone > *,
-        #statement-dropzone > * {
-            position: relative;
-            z-index: 1;
-        }
-
         .dropzone:hover {
             border-color: #007aff;
-        }
-
-        #receipts-dropzone:hover::before,
-        #statement-dropzone:hover::before {
-            background: rgba(255, 255, 255, 0.4);
+            background: #f5f5f7;
         }
 
         .dropzone.dragging {
             border-color: #007aff;
-        }
-
-        #receipts-dropzone.dragging::before,
-        #statement-dropzone.dragging::before {
-            background: rgba(232, 244, 253, 0.5);
+            background: #e8f4fd;
         }
 
         .dropzone-icon {
