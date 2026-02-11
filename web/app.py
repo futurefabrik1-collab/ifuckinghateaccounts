@@ -191,6 +191,8 @@ def load_statement_data(statement_name=None):
             df['Match Confidence'] = 0
         if 'No Receipt Needed' not in df.columns:
             df['No Receipt Needed'] = False
+        if 'Manually_Unmatched' not in df.columns:
+            df['Manually_Unmatched'] = False
     
     return df
 
@@ -547,8 +549,12 @@ def match_receipts():
         if 'Matched Receipt File' in original_df.columns:
             original_df['Matched Receipt File'] = original_df['Matched Receipt File'].astype(str).replace('nan', '')
         
-        # Get unmatched transactions from parsed data
-        unmatched_mask = original_df['Matching Receipt Found'] == False
+        # Add Manually_Unmatched column if it doesn't exist
+        if 'Manually_Unmatched' not in original_df.columns:
+            original_df['Manually_Unmatched'] = False
+        
+        # Get unmatched transactions from parsed data - exclude manually unmatched ones
+        unmatched_mask = (original_df['Matching Receipt Found'] == False) & (original_df['Manually_Unmatched'] == False)
         unmatched_indices = original_df[unmatched_mask].index.tolist()
         
         # Get parsed transactions for unmatched rows
@@ -763,6 +769,11 @@ def assign_receipt():
         df.loc[df_index, 'Matched Receipt File'] = new_filename
         df.loc[df_index, 'Match Confidence'] = 100  # Manual assignment = 100% confidence
         df.loc[df_index, 'No Receipt Needed'] = False  # Clear "no receipt needed" flag
+        
+        # Clear manually unmatched flag since user is now assigning a receipt
+        if 'Manually_Unmatched' not in df.columns:
+            df['Manually_Unmatched'] = False
+        df.loc[df_index, 'Manually_Unmatched'] = False
         
         # Reset ownership buttons to off when receipt is assigned
         if 'Owner_Mark' in df.columns:
@@ -1028,10 +1039,18 @@ def delete_receipt_assignment():
         else:
             return jsonify({'error': 'Receipt file not found'}), 404
         
-        # Clear match in CSV
+        # Clear match in CSV and mark as manually unmatched
         df.loc[df_index, 'Matching Receipt Found'] = False
         df.loc[df_index, 'Matched Receipt File'] = ''
         df.loc[df_index, 'Match Confidence'] = 0
+        
+        # Add Manually_Unmatched column if it doesn't exist
+        if 'Manually_Unmatched' not in df.columns:
+            df['Manually_Unmatched'] = False
+        
+        # Mark as manually unmatched to prevent automatic re-matching
+        df.loc[df_index, 'Manually_Unmatched'] = True
+        
         # Note: We keep "No Receipt Needed" and ownership settings as they were
         
         # Save updated CSV
