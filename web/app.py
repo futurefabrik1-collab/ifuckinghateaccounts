@@ -126,7 +126,43 @@ def load_statement_data(statement_name=None):
     if output_csv.exists():
         df = pd.read_csv(output_csv, sep=';', encoding='utf-8-sig')
     else:
-        df = pd.read_csv(statement_file, sep=';', encoding='utf-8-sig')
+        # Auto-detect delimiter
+        with open(statement_file, 'r', encoding='utf-8-sig') as f:
+            first_line = f.readline()
+            if first_line.count(';') > first_line.count(','):
+                delimiter = ';'
+            elif first_line.count(',') > 0:
+                delimiter = ','
+            elif first_line.count('\t') > 0:
+                delimiter = '\t'
+            else:
+                delimiter = ';'
+        
+        # Try to read with headers first
+        try:
+            df = pd.read_csv(statement_file, sep=delimiter, encoding='utf-8-sig')
+            
+            # Check if it looks like there are no headers (first row contains data)
+            # If first column name looks like a date, probably no headers
+            first_col = df.columns[0]
+            if any(char.isdigit() for char in str(first_col)):
+                # Looks like data, not a header - reload without headers
+                df = pd.read_csv(statement_file, sep=delimiter, encoding='utf-8-sig', header=None)
+                # Assign default column names based on number of columns
+                if len(df.columns) >= 3:
+                    df.columns = ['Date', 'Description', 'Amount'] + [f'Col{i}' for i in range(3, len(df.columns))]
+                else:
+                    df.columns = [f'Col{i}' for i in range(len(df.columns))]
+        except Exception as e:
+            logger.error(f"Error reading CSV: {e}")
+            df = pd.read_csv(statement_file, sep=delimiter, encoding='utf-8-sig', header=None)
+            # Assign default column names
+            if len(df.columns) >= 3:
+                df.columns = ['Date', 'Description', 'Amount'] + [f'Col{i}' for i in range(3, len(df.columns))]
+            else:
+                df.columns = [f'Col{i}' for i in range(len(df.columns))]
+        
+        # Add match status columns if they don't exist
         if 'Matching Receipt Found' not in df.columns:
             df['Matching Receipt Found'] = False
             df['Matched Receipt File'] = ''
