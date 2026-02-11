@@ -540,13 +540,8 @@ def match_receipts():
         if output_csv.exists():
             original_df = pd.read_csv(output_csv, sep=';', encoding='utf-8-sig', dtype={'Matched Receipt File': str})
         else:
-            original_df = pd.read_csv(statement_file, sep=';', encoding='utf-8-sig')
-            if 'Matching Receipt Found' not in original_df.columns:
-                original_df['Matching Receipt Found'] = False
-                original_df['Matched Receipt File'] = ''
-                original_df['Match Confidence'] = 0
-            if 'No Receipt Needed' not in original_df.columns:
-                original_df['No Receipt Needed'] = False
+            # Use load_statement_data to get properly parsed CSV with correct delimiter
+            original_df = load_statement_data(statement_name)
         
         # Ensure correct dtypes for match columns
         if 'Matched Receipt File' in original_df.columns:
