@@ -70,47 +70,27 @@ PORT = ${{PORT}}
 
 ---
 
-### 6. Initialize Database
+### 6. Watch Deployment Logs
 
-Once deployed, click **web service** → **three dots (•••)** → **Shell**
+Railway will **automatically**:
+- ✅ Initialize the database
+- ✅ Create admin user
+- ✅ Display credentials in the logs
 
-Run:
-```bash
-python -c "from src.database import init_database; init_database()"
+Click **Deployments** → Latest deployment → **View Logs**
+
+Look for:
+```
+🎉 ADMIN USER CREATED!
+Username: admin
+Password: Admin123!
 ```
 
-This creates all database tables.
+**Important**: Save these credentials! ⚠️
 
 ---
 
-### 7. Create Admin User
-
-In the Railway shell, run:
-
-```bash
-python -c "
-from src.database import db
-from src.models import User
-
-with db.get_session() as session:
-    admin = User(
-        username='admin',
-        email='your-email@example.com',
-        password='Admin123!'
-    )
-    admin.is_admin = True
-    session.add(admin)
-    
-print('✅ Admin user created!')
-print('Username: admin')
-print('Password: Admin123!')
-print('⚠️  CHANGE PASSWORD AFTER FIRST LOGIN!')
-"
-```
-
----
-
-### 8. Get Your URL
+### 7. Get Your URL
 
 1. Click **Settings** → **Networking**
 2. Click **"Generate Domain"**
@@ -123,7 +103,7 @@ print('⚠️  CHANGE PASSWORD AFTER FIRST LOGIN!')
 
 ---
 
-### 9. Test Your App! 🎉
+### 8. Test Your App! 🎉
 
 1. Open your Railway URL
 2. You should see the login page

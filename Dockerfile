@@ -38,5 +38,9 @@ EXPOSE 5001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:5001/api/health')"
 
+# Startup script that initializes DB and creates admin, then starts app
+COPY startup.sh /app/startup.sh
+RUN chmod +x /app/startup.sh
+
 # Run application
-CMD ["gunicorn", "--bind", "0.0.0.0:5001", "--workers", "4", "--timeout", "120", "web.app:app"]
+CMD ["/app/startup.sh"]
