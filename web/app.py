@@ -143,22 +143,40 @@ def load_statement_data(statement_name=None):
             df = pd.read_csv(statement_file, sep=delimiter, encoding='utf-8-sig')
             
             # Check if it looks like there are no headers (first row contains data)
-            # If first column name looks like a date, probably no headers
-            first_col = df.columns[0]
-            if any(char.isdigit() for char in str(first_col)):
-                # Looks like data, not a header - reload without headers
+            # If first column name looks like a date pattern or number, probably no headers
+            first_col = str(df.columns[0])
+            has_headers = True
+            
+            # Check if first column looks like data (date pattern or pure numbers)
+            if (any(char.isdigit() for char in first_col) and 
+                ('.' in first_col or '/' in first_col or first_col.replace('.', '').replace('/', '').isdigit())):
+                has_headers = False
+            
+            if not has_headers:
+                # Reload without headers
                 df = pd.read_csv(statement_file, sep=delimiter, encoding='utf-8-sig', header=None)
-                # Assign default column names based on number of columns
+                # Use German column names that the app expects
                 if len(df.columns) >= 3:
-                    df.columns = ['Date', 'Description', 'Amount'] + [f'Col{i}' for i in range(3, len(df.columns))]
+                    df.columns = ['Buchungstag', 'Verwendungszweck', 'Betrag'] + [f'Col{i}' for i in range(3, len(df.columns))]
                 else:
                     df.columns = [f'Col{i}' for i in range(len(df.columns))]
+                logger.info(f"No headers detected, assigned columns: {df.columns.tolist()}")
+            else:
+                # Has headers - map common English names to German if needed
+                column_mapping = {
+                    'Date': 'Buchungstag',
+                    'Description': 'Verwendungszweck', 
+                    'Amount': 'Betrag'
+                }
+                df.rename(columns=column_mapping, inplace=True)
+                logger.info(f"Headers detected: {df.columns.tolist()}")
+                
         except Exception as e:
             logger.error(f"Error reading CSV: {e}")
             df = pd.read_csv(statement_file, sep=delimiter, encoding='utf-8-sig', header=None)
-            # Assign default column names
+            # Use German column names
             if len(df.columns) >= 3:
-                df.columns = ['Date', 'Description', 'Amount'] + [f'Col{i}' for i in range(3, len(df.columns))]
+                df.columns = ['Buchungstag', 'Verwendungszweck', 'Betrag'] + [f'Col{i}' for i in range(3, len(df.columns))]
             else:
                 df.columns = [f'Col{i}' for i in range(len(df.columns))]
         
