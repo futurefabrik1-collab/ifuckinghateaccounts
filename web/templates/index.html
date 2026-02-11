@@ -231,11 +231,14 @@
         }
 
         .stat-card.completion-card {
-            background-size: 100% 100%;
+            background-size: contain;
             background-position: center;
             background-repeat: no-repeat;
             position: relative;
             overflow: hidden;
+            background-color: transparent;
+            border: none;
+            padding: 25px;
         }
 
         .stat-card.completion-card::before {
@@ -259,7 +262,7 @@
         }
 
         .stat-value {
-            font-size: 36px;
+            font-size: 43px;
             font-weight: 700;
             margin-bottom: 5px;
             font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
@@ -271,6 +274,13 @@
         .stat-value.missing { color: #ff3b30; }
         .stat-value.total { color: #007aff; }
         .stat-value.completion { color: #af52de; }
+        
+        /* Match label colors to stat values */
+        .stat-card:has(.stat-value.matched) .stat-label { color: #34c759; }
+        .stat-card:has(.stat-value.no-receipt) .stat-label { color: #ff9500; }
+        .stat-card:has(.stat-value.missing) .stat-label { color: #ff3b30; }
+        .stat-card:has(.stat-value.total) .stat-label { color: #007aff; }
+        .stat-card:has(.stat-value.completion) .stat-label { color: #af52de; }
 
         .stat-label {
             color: #86868b;
