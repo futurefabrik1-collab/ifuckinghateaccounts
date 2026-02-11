@@ -2073,7 +2073,7 @@
                         <td>
                             <div class="receipt-cell">
                                 <span class="receipt-name">${tx.receipt || '-'}</span>
-                                ${tx.receipt && tx.receipt !== '-' ? `<button class="delete-receipt-btn" onclick="deleteReceipt(${tx.row}, '${tx.receipt.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"')}', event)">✕</button>` : ''}
+                                ${tx.receipt && tx.receipt !== '-' ? `<button class="delete-receipt-btn" onclick="removeReceiptFromTransaction(${tx.row}, '${tx.receipt.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"')}', event)">✕</button>` : ''}
                             </div>
                         </td>
                     `;
@@ -2513,7 +2513,7 @@
             }
         }
 
-        async function deleteReceipt(row, filename, event) {
+        async function removeReceiptFromTransaction(row, filename, event) {
             event.preventDefault();
             event.stopPropagation();
             
