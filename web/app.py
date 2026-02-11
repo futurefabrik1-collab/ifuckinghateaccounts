@@ -16,6 +16,9 @@ from datetime import datetime
 import shutil
 from collections import deque
 import json
+from src.utils.logging import setup_logger
+
+logger = setup_logger(__name__)
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
