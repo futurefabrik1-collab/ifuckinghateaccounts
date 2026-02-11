@@ -9,7 +9,7 @@ Runs on first deployment to:
 """
 
 import os
-from src.database import db, init_database
+from src.database import init_database
 from src.models import User
 from src.utils.logging import setup_logger
 
@@ -31,6 +31,9 @@ def initialize_application():
     except Exception as e:
         logger.error(f"❌ Database initialization failed: {e}")
         raise
+    
+    # Import db after initialization
+    from src.database import db
     
     # Create admin user if doesn't exist
     logger.info("Checking for admin user...")
