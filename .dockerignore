@@ -47,4 +47,4 @@ backups/
 
 # Desktop launcher
 *.command
-*.sh
+launch_app.sh
