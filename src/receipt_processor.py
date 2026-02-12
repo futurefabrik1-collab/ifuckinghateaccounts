@@ -379,25 +379,27 @@ class ReceiptProcessor:
                     current_year = datetime.now().year
                     current_month = datetime.now().month
                     
-                    # Fix OCR errors that read 2025 as 2029, 2026, etc.
+                    # Fix OCR errors that read years incorrectly
+                    # Strategy: Receipts should generally not be from the future
+                    # If date is in future, try moving it back to make sense
+                    
+                    # Fix obvious OCR errors (2025 -> 2029, 2028, 2027)
                     if parsed_date.year >= 2029:
-                        # OCR likely misread a 5 as 9 (2025 -> 2029)
                         parsed_date = parsed_date.replace(year=2025)
                     elif parsed_date.year == 2028:
-                        # OCR likely misread 2025 as 2028
                         parsed_date = parsed_date.replace(year=2025)
                     elif parsed_date.year == 2027:
-                        # OCR likely misread 2025 as 2027
                         parsed_date = parsed_date.replace(year=2025)
-                    # If parsed year is more than 1 year in future, fix it
-                    elif parsed_date.year > current_year + 1:
-                        parsed_date = parsed_date.replace(year=current_year)
-                    # If parsed is next year but we're early in the year, check if it should be current/last year
-                    elif parsed_date.year == current_year + 1 and current_month <= 6:
-                        # Early in 2026, receipts are likely from 2025 or earlier
-                        # If the date is in the future, move it back one year
+                    
+                    # If date is in the future, move it back
+                    # Receipts are almost always from the past
+                    if parsed_date > datetime.now():
+                        # Try moving back 1 year
+                        parsed_date = parsed_date.replace(year=parsed_date.year - 1)
+                        
+                        # If still in future, move back another year
                         if parsed_date > datetime.now():
-                            parsed_date = parsed_date.replace(year=current_year - 1)
+                            parsed_date = parsed_date.replace(year=parsed_date.year - 1)
                     
                     # Final sanity check - don't return dates too far in future
                     if parsed_date.year <= current_year + 1:
@@ -497,6 +499,21 @@ class ReceiptProcessor:
         # Skip common header words that aren't merchant names
         skip_words = ['receipt', 'invoice', 'bill', 'statement', 'order', 'confirmation', 'eigenbeleg', 'rechnung', 'rechnungsbeleg', 'payment', 'document', 'artikel', 'item', 'items', 'zahlungsmethode', 'payment method']
         
+        # SPECIAL CASE: Search entire document for "CompanyName GmbH" pattern (German invoices often have it at bottom)
+        gmbh_pattern = r'([A-Z][A-Za-z\s&-]+(?:GmbH|AG|OHG|KG|UG|Ltd|Inc|LLC|Corp|ApS|AS))\s'
+        gmbh_matches = re.findall(gmbh_pattern, text)
+        if gmbh_matches:
+            for match in gmbh_matches:
+                # Clean up the match - remove currency codes, extra whitespace
+                clean_match = re.sub(r'\b(EUR|USD|GBP|CHF)\b', '', match, flags=re.IGNORECASE)
+                clean_match = ' '.join(clean_match.split()).strip()
+                
+                # Skip if it contains tax IDs, emails, or URLs
+                if not re.search(r'(ATU|UID|VAT|@|http|www\.)', clean_match, re.IGNORECASE):
+                    # Make sure it's a reasonable length (not too short, not too long)
+                    if 3 < len(clean_match) < 50:
+                        return clean_match
+        
         # First pass: Look for lines with company identifiers (highest priority)
         for i, line in enumerate(lines[:10]):
             line = line.strip()
@@ -505,17 +522,28 @@ class ReceiptProcessor:
             if not line or len(line) < 3:
                 continue
             
+            # Skip lines starting with tax IDs or containing them
+            if re.search(r'(^|\s)(ATU|UID|VAT|USt-IdNr)[:\s]*\d', line, re.IGNORECASE):
+                continue
+            
             # Look for company identifiers (Inc, LLC, GmbH, Ltd, etc.)
-            if re.search(r'\b(inc|llc|gmbh|ltd|limited|corp|corporation|co\.)\b', line, re.IGNORECASE):
+            if re.search(r'\b(inc|llc|gmbh|ltd|limited|corp|corporation|co\.|aps|as|ag)\b', line, re.IGNORECASE):
+                # Skip if line contains tax ID numbers
+                if re.search(r'ATU\s*\d|UID\s*\d|VAT\s*\d', line, re.IGNORECASE):
+                    continue
+                    
                 # If "Bill to" is on the line, extract what comes before it
                 if 'bill to' in line.lower():
                     parts = re.split(r'\s*bill\s+to\s*', line, flags=re.IGNORECASE)
                     if parts[0].strip() and len(parts[0].strip()) > 2:
                         return parts[0].strip()
                 else:
-                    # Extract just the company name
-                    company = re.sub(r'\s+(bill to|invoice|receipt).*', '', line, flags=re.IGNORECASE)
-                    return company.strip()
+                    # Extract just the company name, remove URLs and emails
+                    company = re.sub(r'\s+(bill to|invoice|receipt|http|www\.|@).*', '', line, flags=re.IGNORECASE)
+                    # Clean up extra whitespace
+                    company = ' '.join(company.split())
+                    if len(company) > 2:
+                        return company.strip()
         
         # Second pass: Look for other substantial lines
         for i, line in enumerate(lines[:10]):
