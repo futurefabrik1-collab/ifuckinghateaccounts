@@ -1081,9 +1081,9 @@
             <button class="tab active" onclick="switchTab('all', this)">All Transactions</button>
             <button class="tab" onclick="switchTab('matched', this)">Matched Only</button>
             <button class="tab" onclick="switchTab('unmatched', this)">Unmatched Only</button>
-            <button class="tab" onclick="switchTab('receipts', this)">Receipts in Folder</button>
-            <button class="tab" onclick="switchTab('renamed', this)">Renamed Receipts</button>
-            <button class="tab" onclick="switchTab('pool', this)">📦 Receipt Pool</button>
+            <button class="tab" onclick="switchTab('receipts', this)">Receipts in Folder <span id="receipts-count" class="tab-count"></span></button>
+            <button class="tab" onclick="switchTab('renamed', this)">Renamed Receipts <span id="renamed-count" class="tab-count"></span></button>
+            <button class="tab" onclick="switchTab('pool', this)">📦 Receipt Pool <span id="pool-count" class="tab-count"></span></button>
         </div>
 
         <div class="content-section" id="transactions-section">
@@ -2066,7 +2066,7 @@
                     row.innerHTML = `
                         <td>${tx.row}</td>
                         <td>${tx.date}</td>
-                        <td class="amount ${amountClass}">€${tx.amount}</td>
+                        <td class="amount ${amountClass}">${tx.amount}</td>
                         <td class="description" onclick="showDescriptionModal('${tx.description.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"')}')">
                             <span class="merchant-short">${merchantShort || '(Internal)'}</span>${invoiceButton}
                         </td>
@@ -2240,10 +2240,10 @@
                         <div class="file-meta">${sizeKB} KB • ${date}</div>
                     </div>
                     <div style="display: flex; gap: 8px;">
-                        <button onclick="viewReceipt('${receipt.path}', '${receipt.name}')" class="download-link" style="background: #007aff; text-decoration: none; padding: 6px 12px; border: none; cursor: pointer;">View</button>
-                        <a href="/api/download/${receipt.path}" class="download-link" download>Download</a>
-                        <button onclick="assignFromPool('${receipt.path}', '${receipt.name}')" class="download-link" style="background: #34c759; text-decoration: none; padding: 6px 12px; border: none; cursor: pointer;">Assign</button>
-                        <button onclick="deleteReceipt('${receipt.path}', '${receipt.name}')" class="download-link" style="background: #ff3b30; text-decoration: none; padding: 6px 12px; border: none; cursor: pointer;">Delete</button>
+                        <button onclick="viewReceipt('${receipt.path}', '${receipt.name}')" class="download-link" style="background: #007aff; color: white; text-decoration: none; padding: 6px 12px; border: none; cursor: pointer;">View</button>
+                        <a href="/api/download/${receipt.path}" class="download-link" download style="background: #007aff; color: white;">Download</a>
+                        <button onclick="assignFromPool('${receipt.path}', '${receipt.name}')" class="download-link" style="background: #34c759; color: white; text-decoration: none; padding: 6px 12px; border: none; cursor: pointer;">Assign</button>
+                        <button onclick="deleteReceipt('${receipt.path}', '${receipt.name}')" class="download-link" style="background: #ff3b30; color: white; text-decoration: none; padding: 6px 12px; border: none; cursor: pointer;">Delete</button>
                     </div>
                 `;
                 
