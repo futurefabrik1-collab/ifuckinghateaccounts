@@ -245,6 +245,31 @@ def api_statements():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/debug/columns')
+def api_debug_columns():
+    """Debug endpoint to check CSV columns"""
+    try:
+        statement_name = request.args.get('statement')
+        if not statement_name:
+            return jsonify({'error': 'statement parameter required'}), 400
+        
+        df = load_statement_data(statement_name)
+        if df.empty:
+            return jsonify({'error': 'No data loaded', 'columns': []})
+        
+        # Get first row as sample
+        first_row = df.iloc[0].to_dict() if len(df) > 0 else {}
+        
+        return jsonify({
+            'columns': df.columns.tolist(),
+            'column_count': len(df.columns),
+            'row_count': len(df),
+            'first_row_sample': {k: str(v)[:50] for k, v in first_row.items()}
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/summary')
 def api_summary():
     """Get summary statistics"""
