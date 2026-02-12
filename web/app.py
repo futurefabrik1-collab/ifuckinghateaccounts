@@ -289,22 +289,30 @@ def api_transactions():
         # Convert to list of dicts
         transactions = []
         for idx, row in df.iterrows():
-            # Safely access columns with fallbacks
-            date = row.get('Buchungstag', '')
-            amount = row.get('Betrag', '')
-            description = row.get('Verwendungszweck', row.get('Description', ''))
+            # Safely access columns with proper pandas Series handling
+            # Use column name in brackets with fallback for missing columns
+            date = row['Buchungstag'] if 'Buchungstag' in df.columns else ''
+            amount = row['Betrag'] if 'Betrag' in df.columns else '0.00'
+            
+            # Try Verwendungszweck first, then Description
+            if 'Verwendungszweck' in df.columns:
+                description = row['Verwendungszweck']
+            elif 'Description' in df.columns:
+                description = row['Description']
+            else:
+                description = ''
             
             transactions.append({
                 'row': idx + 2,  # +2 for header and 0-index
                 'date': str(date) if pd.notna(date) else '',
                 'amount': str(amount) if pd.notna(amount) else '0.00',
                 'description': str(description)[:100] if pd.notna(description) else '',
-                'matched': bool(row.get('Matching Receipt Found', False)) if pd.notna(row.get('Matching Receipt Found')) else False,
-                'no_receipt_needed': bool(row.get('No Receipt Needed', False)) if pd.notna(row.get('No Receipt Needed')) else False,
-                'receipt': str(row.get('Matched Receipt File', '')) if pd.notna(row.get('Matched Receipt File', '')) else '',
-                'confidence': int(row.get('Match Confidence', 0)) if pd.notna(row.get('Match Confidence', 0)) else 0,
-                'owner_mark': bool(row.get('Owner_Mark', False)) if pd.notna(row.get('Owner_Mark')) else False,
-                'owner_flo': bool(row.get('Owner_Flo', False)) if pd.notna(row.get('Owner_Flo')) else False
+                'matched': bool(row['Matching Receipt Found']) if 'Matching Receipt Found' in df.columns and pd.notna(row['Matching Receipt Found']) else False,
+                'no_receipt_needed': bool(row['No Receipt Needed']) if 'No Receipt Needed' in df.columns and pd.notna(row['No Receipt Needed']) else False,
+                'receipt': str(row['Matched Receipt File']) if 'Matched Receipt File' in df.columns and pd.notna(row['Matched Receipt File']) else '',
+                'confidence': int(row['Match Confidence']) if 'Match Confidence' in df.columns and pd.notna(row['Match Confidence']) else 0,
+                'owner_mark': bool(row['Owner_Mark']) if 'Owner_Mark' in df.columns and pd.notna(row['Owner_Mark']) else False,
+                'owner_flo': bool(row['Owner_Flo']) if 'Owner_Flo' in df.columns and pd.notna(row['Owner_Flo']) else False
             })
         
         return jsonify(transactions)
