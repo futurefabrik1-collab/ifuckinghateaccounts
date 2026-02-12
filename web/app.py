@@ -319,9 +319,11 @@ def api_transactions():
             date = row['Buchungstag'] if 'Buchungstag' in df.columns else ''
             amount = row['Betrag'] if 'Betrag' in df.columns else '0.00'
             
-            # Try Verwendungszweck first, then Description
+            # Try multiple possible description column names
             if 'Verwendungszweck' in df.columns:
                 description = row['Verwendungszweck']
+            elif 'Task' in df.columns:
+                description = row['Task']
             elif 'Description' in df.columns:
                 description = row['Description']
             else:
