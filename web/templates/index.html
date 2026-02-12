@@ -678,6 +678,24 @@
             white-space: nowrap;
         }
 
+        .preview-receipt-btn {
+            padding: 4px 8px;
+            background: #007aff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            margin-right: 4px;
+        }
+
+        .preview-receipt-btn:hover {
+            background: #0051d5;
+        }
+
         .delete-receipt-btn {
             padding: 4px 8px;
             background: #ff3b30;
@@ -689,6 +707,7 @@
             cursor: pointer;
             transition: all 0.2s ease;
             flex-shrink: 0;
+            margin-left: 4px;
         }
 
         .delete-receipt-btn:hover {
@@ -2072,8 +2091,17 @@
                         </td>
                         <td>
                             <div class="receipt-cell">
-                                <span class="receipt-name">${tx.receipt || '-'}</span>
-                                ${tx.receipt && tx.receipt !== '-' ? `<button class="delete-receipt-btn" onclick="removeReceiptFromTransaction(${tx.row}, '${tx.receipt.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"')}', event)">✕</button>` : ''}
+                                ${tx.receipt && tx.receipt !== '-' ? `
+                                    <button class="preview-receipt-btn" onclick="previewReceipt('${currentStatement}', '${tx.receipt.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"')}', event)" title="Preview receipt">
+                                        👁️
+                                    </button>
+                                    <span class="receipt-name">${tx.receipt}</span>
+                                    <button class="delete-receipt-btn" onclick="removeReceiptFromTransaction(${tx.row}, '${tx.receipt.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"')}', event)" title="Remove receipt">
+                                        ✕
+                                    </button>
+                                ` : `
+                                    <span class="receipt-name">-</span>
+                                `}
                             </div>
                         </td>
                     `;
@@ -2511,6 +2539,22 @@
                 console.error('Error setting ownership:', error);
                 showToast('Error updating ownership', 'error');
             }
+        }
+
+        function previewReceipt(statement, filename, event) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Determine the folder based on filename matching
+            // Check if it's in matched_receipts or receipts folder
+            const matchedPath = `statements/${statement}/matched_receipts/${filename}`;
+            const receiptsPath = `statements/${statement}/receipts/${filename}`;
+            
+            // Try matched folder first (most likely for assigned receipts)
+            const viewUrl = `/api/view/${matchedPath}`;
+            
+            // Open in new window
+            window.open(viewUrl, '_blank', 'width=800,height=1000');
         }
 
         async function removeReceiptFromTransaction(row, filename, event) {
