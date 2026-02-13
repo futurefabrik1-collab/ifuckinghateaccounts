@@ -104,11 +104,11 @@ class TestMatchMarking:
         statement_parser.mark_as_matched(0, 'receipt1.pdf')
         
         # Check it's marked
-        assert statement_parser.df.loc[0, 'matched'] is True
+        assert statement_parser.df.loc[0, 'matched'] == True
         assert statement_parser.df.loc[0, 'matched_receipt'] == 'receipt1.pdf'
         
         # Others should be unmatched
-        assert statement_parser.df.loc[1, 'matched'] is False
+        assert statement_parser.df.loc[1, 'matched'] == False
 
 
 class TestExport:
