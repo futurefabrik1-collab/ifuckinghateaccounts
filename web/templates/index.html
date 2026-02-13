@@ -1505,24 +1505,40 @@
         }
 
         function viewReceipt(filepath, filename) {
+            console.log('viewReceipt called with:', filepath, filename);
+            
             const modal = document.getElementById('viewer-modal');
             const body = document.getElementById('viewer-body');
             const title = document.getElementById('viewer-filename');
+            
+            console.log('Modal elements:', { modal, body, title });
+            
+            if (!modal || !body || !title) {
+                console.error('ERROR: Modal elements not found!');
+                alert('Error: Modal elements not found. Please refresh the page.');
+                return;
+            }
             
             title.textContent = filename;
             
             // Determine file type and create appropriate viewer
             const ext = filename.split('.').pop().toLowerCase();
             
+            // Encode the filepath to handle special characters
+            const encodedPath = encodeURI(filepath);
+            
+            console.log('File extension:', ext, 'Encoded path:', encodedPath);
+            
             if (ext === 'pdf') {
-                body.innerHTML = `<iframe src="/api/view/${filepath}"></iframe>`;
+                body.innerHTML = `<iframe src="/api/view/${encodedPath}"></iframe>`;
             } else if (['png', 'jpg', 'jpeg', 'gif'].includes(ext)) {
-                body.innerHTML = `<img src="/api/view/${filepath}" alt="${filename}">`;
+                body.innerHTML = `<img src="/api/view/${encodedPath}" alt="${filename}">`;
             } else {
                 body.innerHTML = `<p style="padding: 40px; text-align: center;">Preview not available for this file type</p>`;
             }
             
             modal.classList.add('show');
+            console.log('Modal should now be visible');
         }
 
         function closeViewer() {
