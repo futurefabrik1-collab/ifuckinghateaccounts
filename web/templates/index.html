@@ -2584,8 +2584,12 @@
                 viewUrl = `/api/view/${receiptsPath}`;
             }
             
-            // Open in new window
-            window.open(viewUrl, '_blank', 'width=800,height=1000');
+            // Open in popup window (centered on screen)
+            const width = 900;
+            const height = 1000;
+            const left = (screen.width - width) / 2;
+            const top = (screen.height - height) / 2;
+            window.open(viewUrl, 'receiptViewer', `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`);
         }
 
         async function removeReceiptFromTransaction(row, filename, event) {
