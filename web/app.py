@@ -682,15 +682,21 @@ def download_file(filepath):
 def view_file(filepath):
     """View a file inline (for PDF preview)"""
     try:
+        logger.info(f"view_file called with filepath: {filepath}")
         file_path = BASE_DIR / filepath
+        logger.info(f"Constructed file_path: {file_path}")
+        logger.info(f"File exists: {file_path.exists()}, Is file: {file_path.is_file() if file_path.exists() else 'N/A'}")
+        
         if file_path.exists() and file_path.is_file():
             # Determine mimetype
             ext = file_path.suffix.lower()
             mimetype = 'application/pdf' if ext == '.pdf' else 'image/png' if ext == '.png' else 'application/octet-stream'
             return send_file(file_path, mimetype=mimetype, as_attachment=False)
         else:
+            logger.error(f"File not found: {file_path}")
             return jsonify({'error': 'File not found'}), 404
     except Exception as e:
+        logger.error(f"Error in view_file: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 

@@ -2561,10 +2561,13 @@
             event.preventDefault();
             event.stopPropagation();
             
+            // Remove file extension from statement name if present (e.g., "statement.csv" -> "statement")
+            const statementFolder = statement.replace(/\.(csv|xlsx|xls)$/i, '');
+            
             // Determine the folder based on filename matching
             // Check if it's in matched_receipts or receipts folder
-            const matchedPath = `statements/${statement}/matched_receipts/${filename}`;
-            const receiptsPath = `statements/${statement}/receipts/${filename}`;
+            const matchedPath = `statements/${statementFolder}/matched_receipts/${filename}`;
+            const receiptsPath = `statements/${statementFolder}/receipts/${filename}`;
             
             // Try matched folder first (most likely for assigned receipts)
             let viewUrl = `/api/view/${matchedPath}`;
