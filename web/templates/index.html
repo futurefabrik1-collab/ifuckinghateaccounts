@@ -2541,7 +2541,7 @@
             }
         }
 
-        function previewReceipt(statement, filename, event) {
+        async function previewReceipt(statement, filename, event) {
             event.preventDefault();
             event.stopPropagation();
             
@@ -2551,7 +2551,19 @@
             const receiptsPath = `statements/${statement}/receipts/${filename}`;
             
             // Try matched folder first (most likely for assigned receipts)
-            const viewUrl = `/api/view/${matchedPath}`;
+            let viewUrl = `/api/view/${matchedPath}`;
+            
+            // Check if file exists in matched folder, otherwise try receipts folder
+            try {
+                const response = await fetch(viewUrl, { method: 'HEAD' });
+                if (!response.ok) {
+                    // Try receipts folder instead
+                    viewUrl = `/api/view/${receiptsPath}`;
+                }
+            } catch (e) {
+                // If HEAD request fails, try receipts folder
+                viewUrl = `/api/view/${receiptsPath}`;
+            }
             
             // Open in new window
             window.open(viewUrl, '_blank', 'width=800,height=1000');
