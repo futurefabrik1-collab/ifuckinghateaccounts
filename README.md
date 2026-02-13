@@ -1,9 +1,9 @@
 # SWEET DUDE SWEET DUDE SWEET DUDE SWEET 💰
 ## AI-Powered Receipt Matching System
 
-**Version**: 2.2.1 (Final)  
+**Version**: 2.2.2  
 **Status**: Production Ready ✅  
-**Last Updated**: February 10, 2026
+**Last Updated**: February 13, 2026
 
 ---
 
@@ -326,7 +326,16 @@ For issues or questions, refer to:
 
 ## Version History
 
-**2.2.1** (Feb 10, 2026) - Final Release
+**2.2.2** (Feb 13, 2026) - Bug Fix Release
+- ✅ Fixed receipt viewer (was completely broken)
+- ✅ Fixed statement path construction bug (removed .csv from paths)
+- ✅ Added URL encoding for special characters (German umlauts)
+- ✅ Popup window viewer (centered 900×1000px)
+- ✅ Comprehensive test coverage for monitoring module (81%)
+- ✅ 58/58 tests passing (100% pass rate)
+- ✅ Security improvements (path traversal prevention)
+
+**2.2.1** (Feb 10, 2026)
 - ✅ Pattern priority optimization
 - ✅ Scanned PDF OCR with multi-page support
 - ✅ German receipt patterns (7 types)
@@ -340,7 +349,7 @@ For issues or questions, refer to:
 - Fixed false positives (16% → 0%)
 - Enhanced matching safeguards
 
-**2.0.0** - Initial web interface version
+**2.0.0** - Initial web interface version  
 **1.0.0** - Command-line version
 
 ---
